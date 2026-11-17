@@ -1,0 +1,4450 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Delivery Hub prototype</title>
+<style>
+/* ==========================================================================
+   base.css — structural primitives for lo-fi wireframes
+   Greyscale by design. Do not add brand colour here; use theme.css.
+   ========================================================================== */
+
+:root {
+  /* Greyscale scale */
+  --wf-page: #ffffff;
+  --wf-surface: #f8f9fa;
+  --wf-placeholder: #e9ecef;
+  --wf-border: #dee2e6;
+  --wf-border-strong: #adb5bd;
+  --wf-text: #333333;
+  --wf-text-muted: #666666;
+
+  /* The single accent. Interactive affordances only. */
+  --wf-action: #0b63ce;
+  --wf-action-hover: #084b9c;
+
+  /* Annotation layer */
+  --wf-note-bg: #fff8e1;
+  --wf-note-border: #e0b000;
+  --wf-note-query-bg: #fdecea;
+  --wf-note-query-border: #c0392b;
+
+  --wf-radius: 4px;
+  --wf-gutter: 1.5rem;
+  --wf-max-width: 1200px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { font-size: 16px; scroll-behavior: smooth; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+  line-height: 1.6;
+  color: var(--wf-text);
+  background-color: var(--wf-page);
+}
+
+/* Typography — hierarchy only, no character */
+h1, h2, h3, h4, h5, h6 { font-weight: 600; line-height: 1.25; margin-bottom: 0.5rem; }
+h1 { font-size: 2.25rem; }
+h2 { font-size: 1.75rem; }
+h3 { font-size: 1.375rem; }
+h4 { font-size: 1.125rem; }
+h5 { font-size: 1rem; }
+h6 { font-size: 0.9375rem; }
+p { margin-bottom: 1rem; }
+small, .wf-meta { font-size: 0.875rem; color: var(--wf-text-muted); }
+
+a { color: var(--wf-action); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+:focus-visible {
+  outline: 3px solid var(--wf-action);
+  outline-offset: 2px;
+}
+
+/* Layout ------------------------------------------------------------------ */
+.container { max-width: var(--wf-max-width); margin: 0 auto; padding: 0 var(--wf-gutter); }
+main { min-height: 60vh; padding: 2rem 0; }
+section { margin-bottom: 3rem; }
+
+.section-title {
+  font-size: 1.75rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--wf-border);
+}
+
+.grid { display: grid; gap: var(--wf-gutter); }
+.grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.grid-3 { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+.grid-4 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+
+/* Placeholders ------------------------------------------------------------
+   Every image, video, logo or third-party embed is one of these. The label is
+   not optional — an unlabelled grey box tells the client nothing about what
+   goes there. */
+.wf-placeholder {
+  background-color: var(--wf-placeholder);
+  border: 1px dashed var(--wf-border-strong);
+  border-radius: var(--wf-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--wf-text-muted);
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 0.5rem;
+}
+.wf-placeholder.ratio-16-9 { aspect-ratio: 16 / 9; }
+.wf-placeholder.ratio-4-3  { aspect-ratio: 4 / 3; }
+.wf-placeholder.ratio-1-1  { aspect-ratio: 1 / 1; }
+.wf-placeholder.avatar     { aspect-ratio: 1 / 1; border-radius: 50%; max-width: 96px; }
+.wf-placeholder.logo       { height: 40px; width: 140px; }
+.wf-placeholder.embed      { min-height: 320px; }
+
+/* Header / navigation ----------------------------------------------------- */
+header { position: relative; z-index: 1001; }
+header.sticky {
+  position: sticky;
+  top: 0;
+  background-color: var(--wf-page);
+  border-bottom: 1px solid var(--wf-border);
+}
+
+.nav-primary { background-color: var(--wf-surface); border-bottom: 1px solid var(--wf-border); padding: 0.75rem 0; }
+.nav-secondary { background-color: var(--wf-page); border-bottom: 1px solid var(--wf-border); padding: 0.75rem 0; }
+
+.nav-list { list-style: none; display: flex; gap: 1.75rem; align-items: center; flex-wrap: wrap; }
+.nav-item { position: relative; }
+.nav-link { display: block; padding: 0.5rem 0; font-weight: 500; color: var(--wf-text); }
+.nav-link:hover, .nav-link:focus-visible { color: var(--wf-action); }
+.nav-item--right { margin-left: auto; }
+
+/* Dropdown / flyout. Opened by .open, set by JS on hover and focus, so the
+   pattern is keyboard-operable rather than hover-only. */
+.nav-flyout {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 100%;
+  min-width: 220px;
+  background-color: var(--wf-page);
+  border: 1px solid var(--wf-border);
+  border-radius: var(--wf-radius);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  padding: 0.75rem 0;
+  z-index: 1002;
+}
+.nav-item.open > .nav-flyout { display: block; }
+.nav-flyout.wide { width: min(680px, 90vw); padding: 1.5rem; }
+.nav-flyout ul { list-style: none; }
+.nav-flyout li a { display: block; padding: 0.5rem 1rem; font-size: 0.9375rem; }
+.nav-flyout.wide li a { padding: 0.375rem 0; }
+.nav-flyout li a:hover { background-color: var(--wf-surface); }
+.flyout-columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+.flyout-column h5 { margin-bottom: 0.5rem; }
+
+.flyout-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25);
+  z-index: 1000;
+}
+.flyout-backdrop.active { display: block; }
+
+/* Breadcrumb -------------------------------------------------------------- */
+.breadcrumb { padding: 0.75rem 0; font-size: 0.875rem; }
+.breadcrumb-list { list-style: none; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.breadcrumb-item { display: flex; align-items: center; color: var(--wf-text-muted); }
+.breadcrumb-item:not(:last-child)::after { content: '›'; margin-left: 0.5rem; }
+
+/* Buttons ----------------------------------------------------------------- */
+.btn {
+  display: inline-block;
+  padding: 0.6875rem 1.375rem;
+  background-color: var(--wf-action);
+  color: #fff;
+  border: 1px solid var(--wf-action);
+  border-radius: var(--wf-radius);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+}
+.btn:hover { background-color: var(--wf-action-hover); text-decoration: none; }
+.btn-secondary { background-color: transparent; color: var(--wf-action); }
+.btn-secondary:hover { background-color: var(--wf-surface); }
+
+/* Forms ------------------------------------------------------------------- */
+label { display: block; font-weight: 500; margin-bottom: 0.25rem; }
+input[type="text"], input[type="email"], input[type="search"], select, textarea {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--wf-border-strong);
+  border-radius: var(--wf-radius);
+  font: inherit;
+  background: var(--wf-page);
+  color: var(--wf-text);
+}
+.field { margin-bottom: 1.25rem; }
+.field-hint { font-size: 0.8125rem; color: var(--wf-text-muted); margin-top: 0.25rem; }
+.field.has-error input, .field.has-error select { border-color: var(--wf-note-query-border); }
+.field-error { font-size: 0.8125rem; color: var(--wf-note-query-border); margin-top: 0.25rem; }
+
+/* Footer ------------------------------------------------------------------ */
+footer {
+  background-color: var(--wf-surface);
+  border-top: 1px solid var(--wf-border);
+  padding: 3rem 0 1.5rem;
+  margin-top: 4rem;
+}
+.footer-content { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; margin-bottom: 2rem; }
+.footer-column h4 { font-size: 1rem; margin-bottom: 0.75rem; }
+.footer-column ul { list-style: none; }
+.footer-column li { margin-bottom: 0.5rem; }
+.footer-column a { font-size: 0.9375rem; }
+.footer-bottom {
+  border-top: 1px solid var(--wf-border);
+  padding-top: 1.25rem;
+  font-size: 0.875rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  color: var(--wf-text-muted);
+}
+
+/* Responsive -------------------------------------------------------------- */
+@media (max-width: 1024px) {
+  .flyout-columns { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  h1 { font-size: 1.75rem; }
+  h2 { font-size: 1.375rem; }
+  h3 { font-size: 1.1875rem; }
+  .container { padding: 0 1rem; }
+  .nav-list { flex-direction: column; align-items: flex-start; gap: 0.25rem; }
+  .nav-item--right { margin-left: 0; }
+  .nav-flyout, .nav-flyout.wide { position: static; width: 100%; box-shadow: none; border: none; padding-left: 1rem; }
+  .flyout-columns { grid-template-columns: 1fr; }
+  .footer-content { grid-template-columns: repeat(2, 1fr); }
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .footer-content { grid-template-columns: 1fr; }
+}
+/* ==========================================================================
+   components.css — reusable wireframe modules and the annotation layer
+   ========================================================================== */
+
+/* Cards ------------------------------------------------------------------- */
+.card {
+  background-color: var(--wf-page);
+  border: 1px solid var(--wf-border);
+  border-radius: var(--wf-radius);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.card .wf-placeholder { margin: -1.25rem -1.25rem 0.75rem; border-radius: var(--wf-radius) var(--wf-radius) 0 0; border-width: 0 0 1px 0; }
+.card-title { font-size: 1.0625rem; font-weight: 600; }
+.card-text { font-size: 0.9375rem; color: var(--wf-text-muted); }
+.card-link { font-weight: 500; margin-top: auto; }
+
+/* Content highlight (image beside text) ----------------------------------- */
+.content-highlight { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center; }
+.content-highlight.image-right { direction: rtl; }
+.content-highlight.image-right > * { direction: ltr; }
+@media (max-width: 768px) { .content-highlight { grid-template-columns: 1fr; } }
+
+/* Statistics -------------------------------------------------------------- */
+.statistics { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.5rem; }
+.stat-item { text-align: center; padding: 1.25rem; border: 1px solid var(--wf-border); border-radius: var(--wf-radius); }
+.stat-value { font-size: 2.25rem; font-weight: 700; line-height: 1.1; }
+.stat-title { font-weight: 600; margin-top: 0.375rem; }
+.stat-description { font-size: 0.875rem; color: var(--wf-text-muted); }
+
+/* Quote ------------------------------------------------------------------- */
+.wf-quote { border-left: 4px solid var(--wf-border-strong); padding: 1rem 1.25rem; background: var(--wf-surface); border-radius: 0 var(--wf-radius) var(--wf-radius) 0; }
+.wf-quote p { font-style: italic; }
+.wf-quote cite { font-style: normal; font-size: 0.9375rem; color: var(--wf-text-muted); }
+
+/* Accordion --------------------------------------------------------------- */
+.accordion { border: 1px solid var(--wf-border); border-radius: var(--wf-radius); overflow: hidden; }
+.accordion-item + .accordion-item { border-top: 1px solid var(--wf-border); }
+.accordion-title {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--wf-surface);
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  color: var(--wf-text);
+}
+.accordion-icon { transition: transform 0.2s ease; }
+.accordion-item.open .accordion-icon { transform: rotate(180deg); }
+.accordion-content { display: none; padding: 1rem 1.25rem; }
+.accordion-item.open .accordion-content { display: block; }
+
+/* Tabs -------------------------------------------------------------------- */
+.tabs { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--wf-border); flex-wrap: wrap; }
+.tab {
+  padding: 0.625rem 1rem; background: none; border: 1px solid transparent; border-bottom: 0;
+  font: inherit; cursor: pointer; color: var(--wf-text-muted); border-radius: var(--wf-radius) var(--wf-radius) 0 0;
+}
+.tab.active { color: var(--wf-text); font-weight: 600; background: var(--wf-page); border-color: var(--wf-border); margin-bottom: -1px; }
+.tab-panel { display: none; padding: 1.5rem 0; }
+.tab-panel.active { display: block; }
+
+/* Carousel ---------------------------------------------------------------- */
+.carousel { position: relative; overflow: hidden; border: 1px solid var(--wf-border); border-radius: var(--wf-radius); }
+.carousel-track { display: flex; transition: transform 0.3s ease; }
+.carousel-item { min-width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; padding: 1.5rem; }
+@media (max-width: 768px) { .carousel-item { grid-template-columns: 1fr; } }
+.carousel-controls { display: flex; justify-content: space-between; position: absolute; inset: 50% 0 auto; transform: translateY(-50%); pointer-events: none; padding: 0 0.5rem; }
+.carousel-arrow {
+  pointer-events: auto; width: 40px; height: 40px; border-radius: 50%;
+  border: 1px solid var(--wf-border-strong); background: var(--wf-page);
+  font-size: 1.25rem; line-height: 1; cursor: pointer; color: var(--wf-text);
+}
+.carousel-indicators { display: flex; gap: 0.5rem; justify-content: center; padding: 0 0 1rem; }
+.carousel-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--wf-border-strong); border: 0; padding: 0; cursor: pointer; }
+.carousel-dot.active { background: var(--wf-action); }
+
+/* Filters and results ----------------------------------------------------- */
+.filter-bar { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; padding: 1.25rem; background: var(--wf-surface); border: 1px solid var(--wf-border); border-radius: var(--wf-radius); }
+.filter-bar .field { margin-bottom: 0; min-width: 180px; flex: 1; }
+.result-count { font-size: 0.9375rem; color: var(--wf-text-muted); margin: 1.25rem 0; }
+.result-item { padding: 1.25rem 0; border-bottom: 1px solid var(--wf-border); }
+.result-item h3 { font-size: 1.125rem; }
+
+.pagination { display: flex; gap: 0.375rem; list-style: none; justify-content: center; margin-top: 2rem; flex-wrap: wrap; }
+.pagination a, .pagination span {
+  display: block; min-width: 2.25rem; text-align: center; padding: 0.5rem 0.625rem;
+  border: 1px solid var(--wf-border); border-radius: var(--wf-radius);
+}
+.pagination .current { background: var(--wf-action); color: #fff; border-color: var(--wf-action); }
+
+/* Modal ------------------------------------------------------------------- */
+.wf-modal { display: none; position: fixed; inset: 0; z-index: 2000; align-items: center; justify-content: center; padding: 1rem; background: rgba(0,0,0,0.4); }
+.wf-modal.open { display: flex; }
+.wf-modal-panel { background: var(--wf-page); border-radius: var(--wf-radius); max-width: 560px; width: 100%; max-height: 85vh; overflow: auto; padding: 1.75rem; }
+.wf-modal-close { float: right; background: none; border: 0; font-size: 1.5rem; line-height: 1; cursor: pointer; color: var(--wf-text-muted); }
+
+/* --------------------------------------------------------------------------
+   Annotation layer
+   Numbered notes explaining behaviour a screenshot cannot show, plus open
+   questions for the client. Toggled by the .wf-notes-hidden class on <body>
+   so the same file serves both a working review and a clean screenshot.
+   -------------------------------------------------------------------------- */
+.wf-note {
+  position: relative;
+  margin: 0.75rem 0 1.5rem;
+  padding: 0.75rem 1rem 0.75rem 2.75rem;
+  background: var(--wf-note-bg);
+  border-left: 4px solid var(--wf-note-border);
+  border-radius: 0 var(--wf-radius) var(--wf-radius) 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+.wf-note::before {
+  content: attr(data-note);
+  position: absolute;
+  left: 0.625rem;
+  top: 0.7rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--wf-note-border);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wf-note.query { background: var(--wf-note-query-bg); border-left-color: var(--wf-note-query-border); }
+.wf-note.query::before { background: var(--wf-note-query-border); }
+.wf-note-label { display: block; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.6875rem; margin-bottom: 0.125rem; }
+
+body.wf-notes-hidden .wf-note { display: none; }
+
+.wf-notes-toggle {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1500;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--wf-border-strong);
+  border-radius: 999px;
+  background: var(--wf-page);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  color: var(--wf-text);
+}
+
+/* Wireframe hub (src/index.html) ------------------------------------------ */
+.wf-hub-meta { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.875rem; color: var(--wf-text-muted); margin-bottom: 2rem; }
+.wf-hub-meta span { padding: 0.25rem 0.625rem; border: 1px solid var(--wf-border); border-radius: 999px; }
+.wf-hub-list { list-style: none; display: grid; gap: 0.75rem; }
+.wf-hub-list li { border: 1px solid var(--wf-border); border-radius: var(--wf-radius); padding: 0.875rem 1rem; }
+.wf-hub-list a { font-weight: 600; }
+.wf-hub-list p { margin: 0.25rem 0 0; font-size: 0.9375rem; color: var(--wf-text-muted); }
+.wf-req { font-size: 0.75rem; color: var(--wf-text-muted); font-variant-numeric: tabular-nums; }
+/* ==========================================================================
+   dashboard.css — structural modules specific to the Delivery Hub wireframe.
+   Greyscale only. Status is carried by text and fill weight, never hue.
+   ========================================================================== */
+
+body { background: var(--wf-page); color: var(--wf-text); }
+.container { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header.sticky { top: env(safe-area-inset-top, 0px); }
+
+/* Header bits */
+.brand { display: flex; align-items: center; gap: 0.75rem; font-weight: 600; color: var(--wf-text); }
+.viewas { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; }
+.viewas label { margin: 0; font-weight: 500; }
+.viewas select { width: auto; padding: 0.375rem 0.5rem; }
+.nav-secondary .nav-list { gap: 1.25rem; }
+.nav-link[aria-current="page"] { color: var(--wf-action); box-shadow: inset 0 -2px 0 var(--wf-action); }
+.nav-ask { margin-left: auto; }
+.nav-ask .btn { padding: 0.375rem 0.875rem; }
+
+/* Views: one per hash route */
+.view { display: none; }
+.view.active { display: block; }
+.view-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.view-head h1 { margin: 0; }
+.view-head .field { margin: 0; min-width: 220px; }
+
+/* Data freshness strip (R27) */
+.freshness { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; font-size: 0.8125rem; color: var(--wf-text-muted); padding: 0.5rem 0.75rem; border: 1px dashed var(--wf-border-strong); border-radius: var(--wf-radius); margin-bottom: 1.5rem; }
+.freshness b { color: var(--wf-text); font-weight: 600; }
+
+/* KPI tiles (R20) */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+.kpi { border: 1px solid var(--wf-border); border-radius: var(--wf-radius); padding: 1rem; display: flex; flex-direction: column; gap: 0.25rem; color: var(--wf-text); }
+a.kpi:hover { border-color: var(--wf-action); text-decoration: none; }
+.kpi-label { font-size: 0.8125rem; color: var(--wf-text-muted); }
+.kpi-value { font-size: 1.75rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.kpi-sub { font-size: 0.8125rem; color: var(--wf-text-muted); }
+.kpi.dummy { border-style: dashed; }
+
+/* Two-column layout */
+.cols { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 2rem; }
+.cols > * { min-width: 0; }
+@media (max-width: 1024px) { .cols { grid-template-columns: 1fr; } }
+
+/* Tables (R23) */
+.table-wrap { overflow-x: auto; border: 1px solid var(--wf-border); border-radius: var(--wf-radius); }
+table.dt { width: 100%; border-collapse: collapse; font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.dt th, .dt td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--wf-border); vertical-align: top; }
+.dt th { background: var(--wf-surface); font-weight: 600; white-space: nowrap; }
+.dt td.num, .dt th.num { text-align: right; }
+.dt tr:last-child td { border-bottom: 0; }
+.dt th button { background: none; border: 0; font: inherit; font-weight: 600; color: var(--wf-action); cursor: pointer; padding: 0; }
+.dt tfoot td { font-weight: 600; background: var(--wf-surface); }
+
+/* Status labels (R22): weight, not colour */
+.status { display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 0.125rem 0.5rem; border-radius: 999px; border: 1px solid var(--wf-border-strong); white-space: nowrap; }
+.status.s-bad { background: var(--wf-text); color: var(--wf-page); border-color: var(--wf-text); }
+.status.s-warn { background: var(--wf-placeholder); color: var(--wf-text); border-color: var(--wf-text); border-style: dashed; }
+.status.s-ok { background: var(--wf-page); color: var(--wf-text-muted); }
+
+/* Burn bar (R21): fill = used, tick = time elapsed */
+.burn { position: relative; height: 12px; background: var(--wf-placeholder); border-radius: 2px; min-width: 120px; }
+.burn-fill { position: absolute; inset: 0 auto 0 0; background: var(--wf-border-strong); border-radius: 2px; max-width: 100%; }
+.burn-fill.over { background: var(--wf-text); }
+.burn-tick { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--wf-text); }
+.burn-legend { font-size: 0.75rem; color: var(--wf-text-muted); margin-top: 0.25rem; }
+
+/* Simple bar charts */
+.bars { display: grid; gap: 0.5rem; }
+.bar-row { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr) 4.5rem; gap: 0.75rem; align-items: center; font-size: 0.875rem; }
+.bar-track { position: relative; height: 18px; background: var(--wf-surface); border: 1px solid var(--wf-border); border-radius: 2px; }
+.bar-fill { position: absolute; inset: 0 auto 0 0; background: var(--wf-border-strong); }
+.bar-fill.hi { background: var(--wf-text); }
+.bar-target { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--wf-action); }
+.bar-val { text-align: right; font-variant-numeric: tabular-nums; }
+.vbars { display: flex; align-items: flex-end; gap: 0.5rem; height: 160px; padding-top: 0.5rem; border-bottom: 1px solid var(--wf-border-strong); position: relative; }
+.vbar { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 0.25rem; height: 100%; font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+.vbar-fill { width: 100%; max-width: 48px; background: var(--wf-border-strong); }
+.vbar-fill.hi { background: var(--wf-text); }
+.vbar-labels { display: flex; gap: 0.5rem; font-size: 0.75rem; color: var(--wf-text-muted); }
+.vbar-labels span { flex: 1; text-align: center; }
+.vtarget { position: absolute; left: 0; right: 0; border-top: 2px dashed var(--wf-action); font-size: 0.6875rem; color: var(--wf-action); }
+.vtarget span { position: absolute; right: 0; top: -1.1rem; background: var(--wf-page); padding: 0 0.25rem; }
+
+/* Attention list (R24) */
+.attention { list-style: none; border: 1px solid var(--wf-border); border-radius: var(--wf-radius); }
+.attention li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.75rem; padding: 0.75rem 1rem; border-bottom: 1px solid var(--wf-border); font-size: 0.9375rem; align-items: start; }
+.attention li:last-child { border-bottom: 0; }
+.attention .why { display: block; font-size: 0.8125rem; color: var(--wf-text-muted); }
+
+/* Lesson card (R25) */
+.lesson { border: 1px solid var(--wf-border); border-radius: var(--wf-radius); padding: 1rem; display: grid; gap: 0.375rem; font-size: 0.9375rem; }
+.lesson-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; font-size: 0.8125rem; color: var(--wf-text-muted); align-items: center; }
+.lesson dl { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); gap: 0.25rem 0.75rem; margin: 0; }
+.lesson dt { font-size: 0.8125rem; color: var(--wf-text-muted); }
+.lesson dd { margin: 0; }
+.chips { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.chip { border: 1px solid var(--wf-border-strong); background: var(--wf-page); border-radius: 999px; padding: 0.25rem 0.75rem; font: inherit; font-size: 0.8125rem; cursor: pointer; color: var(--wf-text); }
+.chip[aria-pressed="true"] { border-color: var(--wf-action); color: var(--wf-action); font-weight: 600; }
+
+/* AI answer (R26) */
+.ai-box { border: 1px solid var(--wf-border-strong); border-radius: var(--wf-radius); padding: 1rem 1.25rem; background: var(--wf-surface); }
+.ai-box h3 { font-size: 1rem; display: flex; gap: 0.5rem; align-items: center; }
+.ai-tag { font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--wf-border-strong); border-radius: 2px; padding: 0 0.375rem; color: var(--wf-text-muted); font-weight: 600; }
+.ai-sources { font-size: 0.8125rem; color: var(--wf-text-muted); margin-top: 0.5rem; }
+.chat { display: grid; gap: 1rem; margin: 1rem 0; }
+.msg { max-width: 46rem; padding: 0.75rem 1rem; border-radius: var(--wf-radius); border: 1px solid var(--wf-border); }
+.msg.user { justify-self: end; background: var(--wf-placeholder); }
+.msg.bot { background: var(--wf-page); }
+.msg ul { margin: 0.25rem 0 0.5rem 1.25rem; }
+.ask-form { display: flex; gap: 0.5rem; }
+.ask-form input { flex: 1; }
+
+/* Dummy data banner */
+.dummy-banner { border: 2px dashed var(--wf-text); padding: 0.75rem 1rem; border-radius: var(--wf-radius); font-weight: 600; margin-bottom: 1.5rem; }
+
+.muted { color: var(--wf-text-muted); }
+.small { font-size: 0.8125rem; }
+.stack { display: grid; gap: 1rem; }
+.split { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; align-items: center; }
+h2.section-title { font-size: 1.375rem; }
+section h3 { margin-top: 0.5rem; }
+@media (max-width: 768px) {
+  .bar-row { grid-template-columns: 5.5rem minmax(0, 1fr) 4rem; }
+  .nav-ask { margin-left: 0; }
+}
+
+/* Mobile header: keep sections on one scrollable row rather than a tall stack */
+@media (max-width: 768px) {
+  header.sticky { position: relative; top: 0; }
+  .nav-primary .nav-list { flex-direction: row; justify-content: space-between; align-items: center; }
+  .nav-secondary .nav-list { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; gap: 1rem; align-items: center; padding-bottom: 0.25rem; }
+  .nav-secondary .nav-link { white-space: nowrap; }
+  .nav-ask .btn { white-space: nowrap; }
+  .viewas label { display: none; }
+  .brand .wf-placeholder.logo { width: 80px; }
+}
+
+/* ---- V2 additions ------------------------------------------------------ */
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.changelog { list-style: none; }
+
+/* The three weekly measures (R19) */
+.measures { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.measure { border: 2px solid var(--wf-text); border-radius: var(--wf-radius); padding: 1.25rem; display: grid; gap: 0.5rem; align-content: start; color: var(--wf-text); }
+a.measure:hover { border-color: var(--wf-action); text-decoration: none; }
+.measure.dummy { border-style: dashed; }
+.measure-label { font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--wf-text-muted); }
+.measure-value { font-size: 2.75rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.measure-target { font-size: 0.875rem; }
+.measure-rows { display: grid; gap: 0.25rem; font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.measure-rows div { display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--wf-border); padding-top: 0.25rem; }
+.measure .bars { gap: 0.375rem; }
+.measure .bar-row { grid-template-columns: 6.5rem minmax(0, 1fr) 3.25rem; font-size: 0.8125rem; }
+.type-tag { display: inline-block; font-size: 0.75rem; border: 1px dashed var(--wf-border-strong); border-radius: 2px; padding: 0 0.375rem; color: var(--wf-text-muted); }
+/* ==========================================================================
+   theme.css — the design layer, deliberately empty at wireframe stage.
+
+   Loaded last, after base.css and components.css. Nothing here during the
+   structure phase. When the project moves to design, brand colour, typography
+   and imagery treatment go in this file ONLY — so the design layer can be
+   applied, reviewed and reverted without touching a single page file or any
+   structural CSS.
+
+   When you do fill it in, prefer overriding the custom properties in :root
+   over rewriting component rules:
+
+     :root {
+       --wf-action: #e8590c;
+       --wf-text:   #1a1a1a;
+     }
+
+   ========================================================================== */
+</style>
+</head>
+<body>
+<header class="sticky">
+  <nav class="nav-primary" aria-label="Primary">
+    <div class="container">
+      <ul class="nav-list">
+        <li class="nav-item"><a class="brand" href="#overview"><span class="wf-placeholder logo">Logo</span> Delivery Hub</a></li>
+        <li class="nav-item nav-item--right">
+          <!-- PM filter (R05, V2 item 4): a filter, not a permission -->
+          <div class="viewas">
+            <label for="viewas">PM</label>
+            <select id="viewas">
+              <option value="all">All PMs</option>
+              <option value="Beth">Beth</option>
+              <option value="Marc">Marc</option>
+            </select>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </nav>
+  <nav class="nav-secondary" aria-label="Sections">
+    <div class="container">
+      <ul class="nav-list" id="mainnav">
+        <li class="nav-item"><a class="nav-link" href="#overview">Overview</a></li>
+        <li class="nav-item"><a class="nav-link" href="#projects">Projects</a></li>
+        <li class="nav-item"><a class="nav-link" href="#contracts">SLAs &amp; retainers</a></li>
+        <li class="nav-item"><a class="nav-link" href="#people">People</a></li>
+        <li class="nav-item"><a class="nav-link" href="#support">Support</a></li>
+        <li class="nav-item"><a class="nav-link" href="#pipeline">Pipeline</a></li>
+        <li class="nav-item"><a class="nav-link" href="#clients">Clients</a></li>
+        <li class="nav-item"><a class="nav-link" href="#lessons">Lessons</a></li>
+        <li class="nav-item nav-ask"><a class="btn" href="#assistant">Ask the assistant</a></li>
+        <li class="nav-item"><a class="nav-link small" href="#hub">Wireframe contents</a></li>
+      </ul>
+    </div>
+  </nav>
+</header>
+
+<main>
+  <div class="container">
+
+    <!-- ===================================================== HUB -->
+    <section class="view" id="view-hub" aria-labelledby="hub-h">
+      <h1 id="hub-h">ClerksWell Delivery Hub: interactive wireframes</h1>
+      <p>A clickable lo-fi model of the delivery dashboard. Version 2 reflects Beth's answers and requests from 26 October. It is greyscale on purpose: we are agreeing content and structure, not colours.</p>
+      <div class="wf-hub-meta">
+        <span>Version V2</span>
+        <span>27 Oct 2026</span>
+        <span>Status: for review</span>
+        <span>Access: Level 10 only</span>
+      </div>
+
+      <h2 class="section-title">Views</h2>
+      <ul class="wf-hub-list">
+        <li><a href="#overview">Delivery overview</a> <span class="wf-req">R10 R19 R20 R24</span><p>The page PMs open daily and SMT weekly: portfolio overrun, utilisation against target by department, and at-risk projects first.</p></li>
+        <li><a href="#projects">Project view</a> <span class="wf-req">R12</span><p>Budget, logged, scheduled and forecast for one active project, as they will come from Float, with lessons from projects of the same type.</p></li>
+        <li><a href="#contracts">SLAs and retainers</a> <span class="wf-req">R13 R21</span><p>Budget used against time elapsed, carry-over rules, and end dates with a 60-day warning.</p></li>
+        <li><a href="#people">People and utilisation</a> <span class="wf-req">R14</span><p>Billable logged hours over available hours, against each role's target, by department and by person. Dummy data.</p></li>
+        <li><a href="#support">Support (new)</a> <span class="wf-req">R18</span><p>Zendesk tickets by client and priority, response and resolution times, and tickets beside SLA burn. Dummy data.</p></li>
+        <li><a href="#pipeline">Pipeline</a> <span class="wf-req">R15</span><p>Invoices due October to December 2026, by client and by account manager.</p></li>
+        <li><a href="#clients">Client view</a> <span class="wf-req">R11</span><p>A drill-down: one client's projects, contracts, invoices, tickets, site health and lessons.</p></li>
+        <li><a href="#lessons">Lessons learned</a> <span class="wf-req">R16 R25</span><p>Searchable lessons from closure reports, tagged by project type.</p></li>
+        <li><a href="#assistant">AI assistant</a> <span class="wf-req">R17 R26</span><p>The three weekly questions and a draft weekly SMT summary. Only the suggested questions answer in this prototype.</p></li>
+        <li><a href="#modules">Module library</a> <span class="wf-req">R20–R28</span><p>Every reusable component, shown once.</p></li>
+      </ul>
+
+      <h2 class="section-title">What changed from V1</h2>
+      <p>V1 is frozen as presented. Each change below is numbered to match the change log in the Plan of Action.</p>
+      <ol class="wf-hub-list changelog">
+        <li><p><b>1. Overview</b> leads with the three weekly measures: portfolio overrun, team utilisation against target by department, and at-risk projects.</p></li>
+        <li><p><b>2. Overview</b> has a portfolio overrun tile with the over and under split, and a placeholder for the 12-month trend.</p></li>
+        <li><p><b>3. All views:</b> "at risk" now means any overrun above 0%, for projects and contracts alike.</p></li>
+        <li><p><b>4. Header:</b> "View as" is now a plain PM filter. Everyone in Level 10 sees everything.</p></li>
+        <li><p><b>5. Project:</b> figures are labelled as they will come from Float (budget, logged, scheduled, forecast). Days to complete is gone.</p></li>
+        <li><p><b>6. People:</b> utilisation against role targets, with a department breakdown.</p></li>
+        <li><p><b>7. Support:</b> new Zendesk view.</p></li>
+        <li><p><b>8. Client:</b> Zendesk panel added; account-manager notes removed.</p></li>
+        <li><p><b>9. Lessons and Project:</b> project type shown on both, so matching is visible.</p></li>
+        <li><p><b>10. Assistant:</b> default questions are the three weekly ones, plus a draft weekly SMT summary.</p></li>
+        <li><p><b>11. Pipeline:</b> by client and by account manager, as two tabs.</p></li>
+        <li><p><b>12. Contracts:</b> warning 60 days before a contract ends.</p></li>
+      </ol>
+
+      <h2 class="section-title">Where the numbers come from</h2>
+      <ul class="wf-hub-list">
+        <li><p><b>Anonymised sample figures</b> (client names replaced, money scaled) based on the files Beth shared: Cost Tracker export (last edit 13 Oct 2026), 2026 Q4 SMT Budget Tracker, Payment Schedule 2025 (2026 columns) and three project closure reports. Project figures from the Cost Tracker stand in for what Float will provide.</p></li>
+        <li><p><b>Dummy figures</b> for anything from Float timesheets (utilisation, people, team allocations) and from Zendesk. These have dashed borders. Role targets are placeholders until Beth sends her formula.</p></li>
+      </ul>
+
+      <h2 class="section-title">How to review this</h2>
+      <ul class="wf-hub-list">
+        <li><p>Yellow notes explain behaviour or data sources. Red notes are questions we still need answered. Use the button at the bottom right to hide them.</p></li>
+        <li><p>Filters, tables, tabs and assistant questions all work. Links out to SharePoint, Float or Zendesk go nowhere at this stage.</p></li>
+      </ul>
+    </section>
+
+    <!-- ===================================================== OVERVIEW (R10) -->
+    <section class="view" id="view-overview" aria-labelledby="ov-h">
+      <div class="view-head"><h1 id="ov-h">Delivery overview</h1><span class="muted small" id="ov-scope"></span></div>
+      <div class="freshness" id="fresh-overview"></div>
+
+      <!-- The three weekly measures (V2 items 1, 2) -->
+      <h2 class="section-title">This week's three measures</h2>
+      <div class="measures" id="ov-measures"></div>
+      <p class="wf-note" data-note="1"><span class="wf-note-label">Behaviour</span>Portfolio overrun adds up every active project's forecast (including unbillable time) and budget, then compares the totals. The split underneath stops a good total hiding one bad project. Each block links to the view behind it.</p>
+      <p class="wf-note query" data-note="2"><span class="wf-note-label">Open question</span>Is budget-weighted, including unbillable time, the method you want for the &lt; 10% target? Billable-only gives a lower figure (see the Plan of Action).</p>
+
+      <div class="kpis" id="ov-kpis"></div>
+
+      <div class="cols">
+        <div>
+          <section>
+            <h2 class="section-title">Needs attention</h2>
+            <p class="wf-note" data-note="3"><span class="wf-note-label">Rule</span>At risk = any overrun above 0%. Projects: forecast above budget. Contracts: share of budget used ahead of share of cycle gone. Also listed: contract end dates within 60 days or passed, and Cost Tracker rows not updated for 30+ days.</p>
+            <ul class="attention" id="ov-attention"></ul>
+          </section>
+        </div>
+        <div>
+          <section>
+            <h2 class="section-title">Weekly SMT summary</h2>
+            <div class="ai-box" id="ov-summary"></div>
+            <p class="wf-note" data-note="4"><span class="wf-note-label">Behaviour</span>Drafted by the assistant on Monday after the timesheet deadline, from the same data as the measures. Beth edits it before it goes to SMT.</p>
+          </section>
+          <section>
+            <h2 class="section-title">Portfolio overrun trend</h2>
+            <div class="wf-placeholder" style="min-height:140px">12-month line: portfolio overrun against the 10% target</div>
+            <p class="small muted">Builds from monthly snapshots once Float holds the budgets.</p>
+          </section>
+          <section>
+            <h2 class="section-title">Overrun history</h2>
+            <p class="small">Share of projects forecast over budget, by year due. Anonymised data based on the Cost Tracker archive.</p>
+            <div id="ov-trend"></div>
+          </section>
+        </div>
+      </div>
+      <section>
+        <h2 class="section-title">Active projects</h2>
+        <div class="table-wrap"><table class="dt" id="ov-projects"></table></div>
+        <p class="small muted">Click a column heading to sort. Click a project to open it.</p>
+      </section>
+    </section>
+
+    <!-- ===================================================== PROJECT (R12) -->
+    <section class="view" id="view-projects" aria-labelledby="pr-h">
+      <div class="view-head">
+        <h1 id="pr-h">Project</h1>
+        <div class="field"><label for="project-select">Choose an active project</label><select id="project-select"></select></div>
+      </div>
+      <div id="project-body"></div>
+      <p class="wf-note" data-note="1"><span class="wf-note-label">Data</span>In the build every figure here comes from Float: budget from the project budget, logged from billable timesheets, scheduled from future allocations, forecast = logged + scheduled. The prototype shows Cost Tracker figures in those slots. The Cost Tracker becomes a read-only archive.</p>
+      <p class="wf-note" data-note="2"><span class="wf-note-label">Behaviour</span>Lessons are matched by project type, which is a tag on the Float project and on each lesson.</p>
+    </section>
+
+    <!-- ===================================================== CONTRACTS (R13) -->
+    <section class="view" id="view-contracts" aria-labelledby="ct-h">
+      <div class="view-head"><h1 id="ct-h">SLAs and retainers</h1><span class="muted small">Q4 2026 cycles</span></div>
+      <div class="freshness" id="fresh-contracts"></div>
+      <p class="wf-note" data-note="1"><span class="wf-note-label">Behaviour</span>The bar shows budget used; the black tick shows how much of the cycle has passed. Bar past the tick = at risk. A contract ending within 60 days is flagged so renewal can start.</p>
+      <div class="tabs" role="tablist">
+        <button class="tab active" type="button" data-tab="ct-sla" role="tab" aria-selected="true">SLAs</button>
+        <button class="tab" type="button" data-tab="ct-ret" role="tab" aria-selected="false">Retainers</button>
+      </div>
+      <div class="tab-panel active" id="ct-sla"><div class="table-wrap"><table class="dt" id="ct-sla-table"></table></div></div>
+      <div class="tab-panel" id="ct-ret"><div class="table-wrap"><table class="dt" id="ct-ret-table"></table></div></div>
+      <p class="wf-note" data-note="2"><span class="wf-note-label">Data</span>End dates shown are from the Q4 tracker. Ten have passed, which Beth thinks are out-of-date dates rather than overdue renewals; Marc is updating them as Step 3 of the clean-up.</p>
+    </section>
+
+    <!-- ===================================================== PEOPLE (R14) -->
+    <section class="view" id="view-people" aria-labelledby="pe-h">
+      <div class="view-head">
+        <h1 id="pe-h">People and utilisation</h1>
+        <div class="field"><label for="dept-select">Department</label><select id="dept-select"><option value="all">All departments</option></select></div>
+      </div>
+      <div class="dummy-banner">Dummy data. Float is not connected yet, and the role targets are placeholders until Beth sends the current formula.</div>
+      <div class="kpis" id="pe-kpis"></div>
+      <section>
+        <h2 class="section-title">By department, last 4 weeks</h2>
+        <div class="table-wrap"><table class="dt" id="pe-dept"></table></div>
+        <p class="wf-note" data-note="1"><span class="wf-note-label">Formula</span>Utilisation = billable logged hours ÷ available hours. Against target = billable logged hours ÷ (available hours × role target), summed across the team. 100% means the team hit its blended target.</p>
+      </section>
+      <div class="cols">
+        <section>
+          <h2 class="section-title">By person, last 4 weeks</h2>
+          <div class="table-wrap"><table class="dt" id="pe-table"></table></div>
+          <p class="small muted">Named individuals in the build; visible to everyone in Level 10.</p>
+        </section>
+        <section>
+          <h2 class="section-title">Team against target, 12 weeks</h2>
+          <div id="pe-trend"></div>
+          <h2 class="section-title">Role targets</h2>
+          <div class="table-wrap"><table class="dt" id="pe-targets"></table></div>
+          <p class="wf-note query" data-note="2"><span class="wf-note-label">Open question</span>Please send the current formula and role targets. How should part-time staff, contractors and internal projects be treated?</p>
+        </section>
+      </div>
+    </section>
+
+    <!-- ===================================================== SUPPORT (R18, V2 item 7) -->
+    <section class="view" id="view-support" aria-labelledby="su-h">
+      <div class="view-head"><h1 id="su-h">Support</h1><span class="muted small">Zendesk</span></div>
+      <div class="dummy-banner">Dummy data. Zendesk is not connected yet; SLA burn figures are real.</div>
+      <div class="kpis" id="su-kpis"></div>
+      <div class="cols">
+        <section>
+          <h2 class="section-title">Open tickets by client</h2>
+          <div class="table-wrap"><table class="dt" id="su-open"></table></div>
+        </section>
+        <section>
+          <h2 class="section-title">Created and solved, 12 weeks</h2>
+          <div id="su-trend"></div>
+          <p class="wf-note" data-note="1"><span class="wf-note-label">Data</span>Ticket counts and times come from Zendesk ticket metrics, synced nightly. Time spent on tickets still comes from Float.</p>
+        </section>
+      </div>
+      <section>
+        <h2 class="section-title">Tickets against SLA burn, this quarter</h2>
+        <div class="table-wrap"><table class="dt" id="su-sla"></table></div>
+        <p class="wf-note query" data-note="2"><span class="wf-note-label">Open question</span>Which of these measures matter most? Are tickets tagged as SLA, retainer or chargeable today?</p>
+      </section>
+    </section>
+
+    <!-- ===================================================== PIPELINE (R15) -->
+    <section class="view" id="view-pipeline" aria-labelledby="pi-h">
+      <div class="view-head"><h1 id="pi-h">Pipeline: invoices due</h1></div>
+      <div class="freshness" id="fresh-pipeline"></div>
+      <div class="kpis" id="pi-kpis"></div>
+      <div class="tabs" role="tablist">
+        <button class="tab active" type="button" data-tab="pi-client" role="tab" aria-selected="true">By client</button>
+        <button class="tab" type="button" data-tab="pi-am" role="tab" aria-selected="false">By account manager</button>
+      </div>
+      <div class="tab-panel active" id="pi-client"><div class="table-wrap"><table class="dt" id="pi-table"></table></div></div>
+      <div class="tab-panel" id="pi-am"><div class="table-wrap"><table class="dt" id="pi-am-table"></table></div></div>
+      <p class="wf-note" data-note="1"><span class="wf-note-label">Data</span>Committed and projected are shown by cell colour in today's Payment Schedule, which can't be read reliably. After Step 4 of the clean-up each row has a Status, and these tables split by it.</p>
+    </section>
+
+    <!-- ===================================================== CLIENT (R11) -->
+    <section class="view" id="view-clients" aria-labelledby="cl-h">
+      <div class="view-head">
+        <h1 id="cl-h">Client</h1>
+        <div class="field"><label for="client-select">Choose a client</label><select id="client-select"></select></div>
+      </div>
+      <p class="wf-note" data-note="1"><span class="wf-note-label">Data</span>This page joins every source by client, which only works because the prototype maps the different spellings by hand. In the build this is the Clients list (Step 1 of the clean-up).</p>
+      <div id="client-body"></div>
+    </section>
+
+    <!-- ===================================================== LESSONS (R16) -->
+    <section class="view" id="view-lessons" aria-labelledby="le-h">
+      <div class="view-head"><h1 id="le-h">Lessons learned</h1></div>
+      <section>
+        <h2 class="section-title">Closed projects</h2>
+        <div class="table-wrap"><table class="dt" id="le-closures"></table></div>
+        <p class="wf-note" data-note="1"><span class="wf-note-label">Data</span>Profit or loss uses the closure report's method: price to client minus actual days × £392 break-even. Client G has no baseline estimate, so its variance can't be calculated.</p>
+      </section>
+      <section>
+        <h2 class="section-title">Library</h2>
+        <div class="filter-bar">
+          <div class="field"><label for="le-search">Search lessons</label><input type="search" id="le-search" placeholder="e.g. QA, vehicle listings, TipTap"></div>
+          <div class="field"><span class="small">Category</span><div class="chips" id="le-cats"></div></div>
+        </div>
+        <p class="result-count" id="le-count"></p>
+        <div class="grid grid-2" id="le-list"></div>
+        <p class="wf-note" data-note="2"><span class="wf-note-label">Behaviour</span>Each lesson carries a project type. The same lessons appear automatically on any active project of that type.</p>
+      </section>
+    </section>
+
+    <!-- ===================================================== ASSISTANT (R17) -->
+    <section class="view" id="view-assistant" aria-labelledby="as-h">
+      <div class="view-head"><h1 id="as-h">Ask the assistant</h1></div>
+      <p class="wf-note" data-note="1"><span class="wf-note-label">Behaviour</span>The assistant reads the same tables as the dashboard. Every answer lists the sources it used, so a PM can check it.</p>
+      <h2 class="section-title">This week's questions</h2>
+      <div class="chips" id="as-suggest"></div>
+      <div class="chat" id="as-chat" aria-live="polite"></div>
+      <form class="ask-form" id="as-form">
+        <label for="as-input" class="visually-hidden">Your question</label>
+        <input type="text" id="as-input" placeholder="Ask about projects, contracts, people, support or lessons">
+        <button class="btn" type="submit">Ask</button>
+      </form>
+    </section>
+
+    <!-- ===================================================== MODULES -->
+    <section class="view" id="view-modules" aria-labelledby="mo-h">
+      <h1 id="mo-h">Module library</h1>
+      <p>Every reusable component, shown once.</p>
+      <div class="stack" id="mo-body"></div>
+    </section>
+
+  </div>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="footer-bottom">
+      <span>ClerksWell Delivery Hub · Level 10 only</span>
+      <span>Wireframe V2: structure only, not a design. Float timesheet and Zendesk figures are dummy.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* Anonymised sample data. Float and Zendesk figures are dummy. */
+window.DH_DATA = {
+ "asOf": "2026-10-19",
+ "projects": [
+  {
+   "client": "Client C",
+   "project": "Website Rebuild 2026",
+   "budget": 54592.5,
+   "forecast": 72678.91,
+   "spend": 70015.86,
+   "overrun": 0.3313,
+   "overrunUB": 0.3703,
+   "edc": 5.0,
+   "due": "2026-11-04",
+   "owner": "BM",
+   "updated": "2026-10-13"
+  },
+  {
+   "client": "Client B",
+   "project": "policy platform migration",
+   "budget": 68111.95,
+   "forecast": 71199.75,
+   "spend": 58564.49,
+   "overrun": 0.0453,
+   "overrunUB": 0.0508,
+   "edc": 16.0,
+   "due": "2026-08-22",
+   "owner": "MS",
+   "updated": "2026-10-12"
+  },
+  {
+   "client": "Client B",
+   "project": "DMS \u2013 legal entity Configuration",
+   "budget": 3697.5,
+   "forecast": 2006.53,
+   "spend": 1810.69,
+   "overrun": -0.4573,
+   "overrunUB": -0.4573,
+   "edc": 0.25,
+   "due": "2026-09-01",
+   "owner": "MS",
+   "updated": "2026-10-12"
+  },
+  {
+   "client": "Client D",
+   "project": "Social Campaign",
+   "budget": 8265.0,
+   "forecast": 11515.22,
+   "spend": 11101.97,
+   "overrun": 0.3933,
+   "overrunUB": 0.6245,
+   "edc": 0.5,
+   "due": "2026-09-09",
+   "owner": "MS",
+   "updated": "2026-10-12"
+  },
+  {
+   "client": "Client C",
+   "project": "Migration and Upgrade of Resource Centre",
+   "budget": 5176.5,
+   "forecast": 8844.2,
+   "spend": 7017.2,
+   "overrun": 0.7085,
+   "overrunUB": 0.7085,
+   "edc": 3.0,
+   "due": "2026-09-01",
+   "owner": "BM",
+   "updated": "2026-08-25"
+  },
+  {
+   "client": "Client E",
+   "project": "Azure Landing Zone Migration Support",
+   "budget": 5481.0,
+   "forecast": 3915.0,
+   "spend": 3915.0,
+   "overrun": -0.2857,
+   "overrunUB": -0.2857,
+   "edc": 0.0,
+   "due": "2026-08-19",
+   "owner": "BM",
+   "updated": "2026-08-25"
+  },
+  {
+   "client": "Client A",
+   "project": "Client portal",
+   "budget": 9396.0,
+   "forecast": 8441.72,
+   "spend": 2960.72,
+   "overrun": -0.1016,
+   "overrunUB": -0.1016,
+   "edc": 7.0,
+   "due": "2026-09-24",
+   "owner": "MS",
+   "updated": "2026-09-21"
+  },
+  {
+   "client": "Client B",
+   "project": "policy platform Sharepoint Plugin Knowledge Share",
+   "budget": 6481.5,
+   "forecast": 3564.4,
+   "spend": 3159.3,
+   "overrun": -0.4501,
+   "overrunUB": -0.4501,
+   "edc": 0.5,
+   "due": "2026-09-23",
+   "owner": "MS",
+   "updated": "2026-10-12"
+  },
+  {
+   "client": "Client D",
+   "project": "Umbraco v17 Upgrade",
+   "budget": 8678.25,
+   "forecast": 10494.49,
+   "spend": 4708.99,
+   "overrun": 0.2093,
+   "overrunUB": 0.3908,
+   "edc": 7.0,
+   "due": "2026-11-28",
+   "owner": "MS",
+   "updated": "2026-10-12"
+  },
+  {
+   "client": "Client E",
+   "project": "New Environments Work",
+   "budget": 12528.0,
+   "forecast": 10007.72,
+   "spend": 611.72,
+   "overrun": -0.2012,
+   "overrunUB": -0.2012,
+   "edc": 12.0,
+   "due": "2026-09-30",
+   "owner": "BM",
+   "updated": "2026-09-17"
+  },
+  {
+   "client": "Client B",
+   "project": "policy platform Integration Disaster Recovery",
+   "budget": 8678.25,
+   "forecast": 5992.12,
+   "spend": 3925.88,
+   "overrun": -0.3095,
+   "overrunUB": -0.3095,
+   "edc": 2.5,
+   "due": "2026-10-09",
+   "owner": "MS",
+   "updated": "2026-10-12"
+  },
+  {
+   "client": "Client F",
+   "project": "Interactive Visualisation",
+   "budget": 5481.0,
+   "forecast": 2226.66,
+   "spend": 1443.66,
+   "overrun": -0.5937,
+   "overrunUB": -0.5937,
+   "edc": 1.0,
+   "due": "2026-10-14",
+   "owner": "MS",
+   "updated": "2026-10-12"
+  },
+  {
+   "client": "Client A",
+   "project": "Website Performance Improvements",
+   "budget": 63423.0,
+   "forecast": 64189.37,
+   "spend": 10162.37,
+   "overrun": 0.0121,
+   "overrunUB": 0.0121,
+   "edc": 69.0,
+   "due": "2026-11-30",
+   "owner": "BM",
+   "updated": "2026-10-13"
+  }
+ ],
+ "trend": [
+  {
+   "yr": 2021,
+   "n": 9,
+   "over": 1,
+   "portfolio": -0.019
+  },
+  {
+   "yr": 2022,
+   "n": 33,
+   "over": 9,
+   "portfolio": 0.312
+  },
+  {
+   "yr": 2023,
+   "n": 39,
+   "over": 18,
+   "portfolio": 0.146
+  },
+  {
+   "yr": 2024,
+   "n": 31,
+   "over": 7,
+   "portfolio": 0.152
+  },
+  {
+   "yr": 2025,
+   "n": 31,
+   "over": 8,
+   "portfolio": 0.136
+  },
+  {
+   "yr": 2026,
+   "n": 29,
+   "over": 12,
+   "portfolio": 0.14
+  }
+ ],
+ "history": [
+  {
+   "client": "Client U",
+   "project": "Past project 001",
+   "budget": 115652.58,
+   "forecast": 109735.71,
+   "overrun": -0.051,
+   "yr": 2022
+  },
+  {
+   "client": "Client W",
+   "project": "Past project 002",
+   "budget": 6963.48,
+   "forecast": 10796.7,
+   "overrun": 0.55,
+   "yr": 2022
+  },
+  {
+   "client": "Client W",
+   "project": "Past project 003",
+   "budget": 6075.21,
+   "forecast": 5241.75,
+   "overrun": -0.137,
+   "yr": 2022
+  },
+  {
+   "client": "Client W",
+   "project": "Past project 004",
+   "budget": 9298.56,
+   "forecast": 33931.74,
+   "overrun": 2.649,
+   "yr": 2022
+  },
+  {
+   "client": "Client W",
+   "project": "Past project 005",
+   "budget": 18270.0,
+   "forecast": 17563.56,
+   "overrun": -0.039,
+   "yr": 2022
+  },
+  {
+   "client": "Client V",
+   "project": "Past project 006",
+   "budget": 19705.5,
+   "forecast": 5558.43,
+   "overrun": -0.718,
+   "yr": 2022
+  },
+  {
+   "client": "Client V",
+   "project": "Past project 007",
+   "budget": 7025.25,
+   "forecast": 7734.3,
+   "overrun": 0.101,
+   "yr": 2021
+  },
+  {
+   "client": "Client X",
+   "project": "Past project 008",
+   "budget": 14616.0,
+   "forecast": 27595.53,
+   "overrun": 0.888,
+   "yr": 2022
+  },
+  {
+   "client": "Client K Group",
+   "project": "Past project 009",
+   "budget": 9152.4,
+   "forecast": 9029.73,
+   "overrun": -0.013,
+   "yr": 2021
+  },
+  {
+   "client": "Client K Group",
+   "project": "Past project 010",
+   "budget": 3843.66,
+   "forecast": 2621.31,
+   "overrun": -0.318,
+   "yr": 2021
+  },
+  {
+   "client": "Client K Group",
+   "project": "Past project 011",
+   "budget": 12092.13,
+   "forecast": 12291.36,
+   "overrun": 0.017,
+   "yr": 2021
+  },
+  {
+   "client": "Client K Group",
+   "project": "Past project 012",
+   "budget": 4770.21,
+   "forecast": 4464.84,
+   "overrun": -0.064,
+   "yr": 2022
+  },
+  {
+   "client": "Client Y",
+   "project": "Past project 013",
+   "budget": 93090.0,
+   "forecast": 237414.3,
+   "overrun": 1.55,
+   "yr": 2022
+  },
+  {
+   "client": "Client AB",
+   "project": "Past project 014",
+   "budget": 47850.0,
+   "forecast": 48028.35,
+   "overrun": 0.004,
+   "yr": 2021
+  },
+  {
+   "client": "Client AF",
+   "project": "Past project 015",
+   "budget": 4350.0,
+   "forecast": 8233.68,
+   "overrun": 0.893,
+   "yr": 2022
+  },
+  {
+   "client": "Client L",
+   "project": "Past project 016",
+   "budget": 14877.0,
+   "forecast": 12609.78,
+   "overrun": -0.152,
+   "yr": 2022
+  },
+  {
+   "client": "Client L",
+   "project": "Past project 017",
+   "budget": 90132.0,
+   "forecast": 91002.0,
+   "overrun": 0.01,
+   "yr": 2023
+  },
+  {
+   "client": "Client AE",
+   "project": "Past project 018",
+   "budget": 25719.81,
+   "forecast": 50111.13,
+   "overrun": 0.948,
+   "yr": 2023
+  },
+  {
+   "client": "Client AE",
+   "project": "Past project 019",
+   "budget": 215900.94,
+   "forecast": 369141.0,
+   "overrun": 0.71,
+   "yr": 2022
+  },
+  {
+   "client": "Client AE",
+   "project": "Past project 020",
+   "budget": 25578.0,
+   "forecast": 31667.13,
+   "overrun": 0.238,
+   "yr": 2022
+  },
+  {
+   "client": "Client AE",
+   "project": "Past project 021",
+   "budget": 89718.75,
+   "forecast": 128429.4,
+   "overrun": 0.431,
+   "yr": 2023
+  },
+  {
+   "client": "Client AE",
+   "project": "Past project 022",
+   "budget": 1957.5,
+   "forecast": 1916.61,
+   "overrun": -0.021,
+   "yr": 2022
+  },
+  {
+   "client": "Client AE",
+   "project": "Past project 023",
+   "budget": 1305.0,
+   "forecast": 1288.47,
+   "overrun": -0.013,
+   "yr": 2022
+  },
+  {
+   "client": "Client AE",
+   "project": "Past project 024",
+   "budget": 2936.25,
+   "forecast": 2977.14,
+   "overrun": 0.014,
+   "yr": 2022
+  },
+  {
+   "client": "Client E Group",
+   "project": "Past project 025",
+   "budget": 9613.5,
+   "forecast": 9613.5,
+   "overrun": 0.0,
+   "yr": 2022
+  },
+  {
+   "client": "Client E Group",
+   "project": "Past project 026",
+   "budget": 3327.75,
+   "forecast": 6863.43,
+   "overrun": 1.063,
+   "yr": 2022
+  },
+  {
+   "client": "Client E Group",
+   "project": "Past project 027",
+   "budget": 8613.0,
+   "forecast": 11191.68,
+   "overrun": 0.299,
+   "yr": 2022
+  },
+  {
+   "client": "Client E Group",
+   "project": "Past project 028",
+   "budget": 6655.5,
+   "forecast": 6909.54,
+   "overrun": 0.038,
+   "yr": 2022
+  },
+  {
+   "client": "Client E Group",
+   "project": "Past project 029",
+   "budget": 10722.75,
+   "forecast": 9505.62,
+   "overrun": -0.114,
+   "yr": 2022
+  },
+  {
+   "client": "Client E Group",
+   "project": "Past project 030",
+   "budget": 12201.75,
+   "forecast": 12017.31,
+   "overrun": -0.015,
+   "yr": 2022
+  },
+  {
+   "client": "Client E Group",
+   "project": "Past project 031",
+   "budget": 139939.5,
+   "forecast": 141810.0,
+   "overrun": 0.013,
+   "yr": 2023
+  },
+  {
+   "client": "Client P",
+   "project": "Past project 032",
+   "budget": 7280.16,
+   "forecast": 7204.47,
+   "overrun": -0.01,
+   "yr": 2022
+  },
+  {
+   "client": "Client T",
+   "project": "Past project 033",
+   "budget": 164430.0,
+   "forecast": 142361.58,
+   "overrun": -0.134,
+   "yr": 2022
+  },
+  {
+   "client": "Client R",
+   "project": "Past project 034",
+   "budget": 33669.0,
+   "forecast": 32792.91,
+   "overrun": -0.026,
+   "yr": 2022
+  },
+  {
+   "client": "Client H Group",
+   "project": "Past project 035",
+   "budget": 22185.0,
+   "forecast": 22221.54,
+   "overrun": 0.002,
+   "yr": 2022
+  },
+  {
+   "client": "Client H Group",
+   "project": "Past project 036",
+   "budget": 22185.0,
+   "forecast": 22185.0,
+   "overrun": 0.0,
+   "yr": 2022
+  },
+  {
+   "client": "Client H Group",
+   "project": "Past project 037",
+   "budget": 22185.0,
+   "forecast": 22171.08,
+   "overrun": -0.001,
+   "yr": 2022
+  },
+  {
+   "client": "Client H Group",
+   "project": "Past project 038",
+   "budget": 22185.0,
+   "forecast": 22185.0,
+   "overrun": 0.0,
+   "yr": 2021
+  },
+  {
+   "client": "Client H Group",
+   "project": "Past project 039",
+   "budget": 5927.31,
+   "forecast": 2664.81,
+   "overrun": -0.55,
+   "yr": 2022
+  },
+  {
+   "client": "Client H Group",
+   "project": "Past project 040",
+   "budget": 13311.0,
+   "forecast": 13125.69,
+   "overrun": -0.014,
+   "yr": 2022
+  },
+  {
+   "client": "Client H Group",
+   "project": "Past project 041",
+   "budget": 13311.0,
+   "forecast": 13311.0,
+   "overrun": 0.0,
+   "yr": 2022
+  },
+  {
+   "client": "Client H Group",
+   "project": "Past project 042",
+   "budget": 13311.0,
+   "forecast": 13311.0,
+   "overrun": 0.0,
+   "yr": 2021
+  },
+  {
+   "client": "Client B",
+   "project": "Past project 043",
+   "budget": 7373.25,
+   "forecast": 6552.84,
+   "overrun": -0.111,
+   "yr": 2021
+  },
+  {
+   "client": "Client B",
+   "project": "Past project 044",
+   "budget": 15899.25,
+   "forecast": 14397.63,
+   "overrun": -0.094,
+   "yr": 2021
+  },
+  {
+   "client": "Client AE",
+   "project": "Past project 045",
+   "budget": 5546.25,
+   "forecast": 5611.5,
+   "overrun": 0.012,
+   "yr": 2022
+  },
+  {
+   "client": "Client V",
+   "project": "Past project 046",
+   "budget": 20749.5,
+   "forecast": 5063.4,
+   "overrun": -0.756,
+   "yr": 2023
+  },
+  {
+   "client": "Client P",
+   "project": "Past project 047",
+   "budget": 21099.24,
+   "forecast": 21763.92,
+   "overrun": 0.032,
+   "yr": 2023
+  },
+  {
+   "client": "Client H Group",
+   "project": "Past project 048",
+   "budget": 24273.0,
+   "forecast": 23866.71,
+   "overrun": -0.017,
+   "yr": 2023
+  },
+  {
+   "client": "Client H Group",
+   "project": "Past project 049",
+   "budget": 11745.0,
+   "forecast": 32403.15,
+   "overrun": 1.759,
+   "yr": 2023
+  },
+  {
+   "client": "Client T",
+   "project": "Past project 050",
+   "budget": 87000.0,
+   "forecast": 44761.5,
+   "overrun": -0.485,
+   "yr": 2023
+  },
+  {
+   "client": "Client T",
+   "project": "Past project 051",
+   "budget": 67651.2,
+   "forecast": 106153.92,
+   "overrun": 0.569,
+   "yr": 2023
+  },
+  {
+   "client": "Client L",
+   "project": "Past project 052",
+   "budget": 7047.0,
+   "forecast": 7223.61,
+   "overrun": 0.025,
+   "yr": 2023
+  },
+  {
+   "client": "Client E Group",
+   "project": "Past project 053",
+   "budget": 4339.56,
+   "forecast": 7959.63,
+   "overrun": 0.834,
+   "yr": 2023
+  },
+  {
+   "client": "Client P",
+   "project": "Past project 054",
+   "budget": 78735.0,
+   "forecast": 95469.45,
+   "overrun": 0.213,
+   "yr": 2023
+  },
+  {
+   "client": "Client AE",
+   "project": "Past project 055",
+   "budget": 2610.0,
+   "forecast": 2623.05,
+   "overrun": 0.005,
+   "yr": 2023
+  },
+  {
+   "client": "Client K",
+   "project": "Past project 056",
+   "budget": 22965.39,
+   "forecast": 53571.99,
+   "overrun": 1.333,
+   "yr": 2023
+  },
+  {
+   "client": "Client H Group",
+   "project": "Past project 057",
+   "budget": 31320.0,
+   "forecast": 42567.36,
+   "overrun": 0.359,
+   "yr": 2023
+  },
+  {
+   "client": "Client AE",
+   "project": "Past project 058",
+   "budget": 29910.6,
+   "forecast": 29737.47,
+   "overrun": -0.006,
+   "yr": 2023
+  },
+  {
+   "client": "Client W",
+   "project": "Past project 059",
+   "budget": 12680.25,
+   "forecast": 12642.84,
+   "overrun": -0.003,
+   "yr": 2023
+  },
+  {
+   "client": "Client P",
+   "project": "Past project 060",
+   "budget": 38915.1,
+   "forecast": 30256.86,
+   "overrun": -0.222,
+   "yr": 2023
+  },
+  {
+   "client": "Client K",
+   "project": "Past project 061",
+   "budget": 9039.3,
+   "forecast": 5166.93,
+   "overrun": -0.428,
+   "yr": 2023
+  },
+  {
+   "client": "Client T",
+   "project": "Past project 062",
+   "budget": 4502.25,
+   "forecast": 4959.0,
+   "overrun": 0.101,
+   "yr": 2023
+  },
+  {
+   "client": "Client U",
+   "project": "Past project 063",
+   "budget": 4067.25,
+   "forecast": 5176.5,
+   "overrun": 0.273,
+   "yr": 2023
+  },
+  {
+   "client": "Client P",
+   "project": "Past project 064",
+   "budget": 20364.96,
+   "forecast": 111778.47,
+   "overrun": 4.489,
+   "yr": 2023
+  },
+  {
+   "client": "Client F",
+   "project": "Past project 065",
+   "budget": 19596.75,
+   "forecast": 27846.09,
+   "overrun": 0.421,
+   "yr": 2023
+  },
+  {
+   "client": "Client T",
+   "project": "Past project 066",
+   "budget": 11353.5,
+   "forecast": 4306.5,
+   "overrun": -0.621,
+   "yr": 2023
+  },
+  {
+   "client": "Client T",
+   "project": "Past project 067",
+   "budget": 46980.0,
+   "forecast": 71827.2,
+   "overrun": 0.529,
+   "yr": 2023
+  },
+  {
+   "client": "Client T",
+   "project": "Past project 068",
+   "budget": 69687.0,
+   "forecast": 48557.31,
+   "overrun": -0.303,
+   "yr": 2023
+  },
+  {
+   "client": "Client T",
+   "project": "Past project 069",
+   "budget": 1761.75,
+   "forecast": 2136.72,
+   "overrun": 0.213,
+   "yr": 2023
+  },
+  {
+   "client": "Client U",
+   "project": "Past project 070",
+   "budget": 50286.0,
+   "forecast": 62364.21,
+   "overrun": 0.24,
+   "yr": 2023
+  },
+  {
+   "client": "Client T",
+   "project": "Past project 071",
+   "budget": 9818.82,
+   "forecast": 5872.5,
+   "overrun": -0.402,
+   "yr": 2023
+  },
+  {
+   "client": "Client F",
+   "project": "Past project 072",
+   "budget": 34756.5,
+   "forecast": 65724.15,
+   "overrun": 0.891,
+   "yr": 2023
+  },
+  {
+   "client": "Client E Group",
+   "project": "Past project 073",
+   "budget": 39411.0,
+   "forecast": 39484.95,
+   "overrun": 0.002,
+   "yr": 2023
+  },
+  {
+   "client": "Client AA",
+   "project": "Past project 074",
+   "budget": 17400.0,
+   "forecast": 17381.73,
+   "overrun": -0.001,
+   "yr": 2023
+  },
+  {
+   "client": "Client AG",
+   "project": "Past project 075",
+   "budget": 56419.5,
+   "forecast": 72387.48,
+   "overrun": 0.283,
+   "yr": 2023
+  },
+  {
+   "client": "Client AE",
+   "project": "Past project 076",
+   "budget": 138286.5,
+   "forecast": 82308.96,
+   "overrun": -0.405,
+   "yr": 2023
+  },
+  {
+   "client": "Client AE",
+   "project": "Past project 077",
+   "budget": 35235.0,
+   "forecast": 39324.0,
+   "overrun": 0.116,
+   "yr": 2023
+  },
+  {
+   "client": "Client W",
+   "project": "Past project 078",
+   "budget": 6590.25,
+   "forecast": 6590.25,
+   "overrun": 0.0,
+   "yr": 2023
+  },
+  {
+   "client": "Client T",
+   "project": "Past project 079",
+   "budget": 29440.8,
+   "forecast": 18198.66,
+   "overrun": -0.382,
+   "yr": 2023
+  },
+  {
+   "client": "Client T",
+   "project": "Past project 080",
+   "budget": 126063.0,
+   "forecast": 179389.65,
+   "overrun": 0.423,
+   "yr": 2024
+  },
+  {
+   "client": "Client E Group",
+   "project": "Past project 081",
+   "budget": 3915.0,
+   "forecast": 2911.89,
+   "overrun": -0.256,
+   "yr": 2023
+  },
+  {
+   "client": "Client D Group",
+   "project": "Past project 082",
+   "budget": 25056.0,
+   "forecast": 23734.47,
+   "overrun": -0.053,
+   "yr": 2024
+  },
+  {
+   "client": "Client E Group",
+   "project": "Past project 083",
+   "budget": 7960.5,
+   "forecast": 8557.32,
+   "overrun": 0.075,
+   "yr": 2024
+  },
+  {
+   "client": "Client F",
+   "project": "Past project 084",
+   "budget": 20184.0,
+   "forecast": 17895.03,
+   "overrun": -0.113,
+   "yr": 2024
+  },
+  {
+   "client": "Client J",
+   "project": "Past project 085",
+   "budget": 25404.0,
+   "forecast": 17669.7,
+   "overrun": -0.304,
+   "yr": 2024
+  },
+  {
+   "client": "Client F",
+   "project": "Past project 086",
+   "budget": 6655.5,
+   "forecast": 6903.45,
+   "overrun": 0.037,
+   "yr": 2024
+  },
+  {
+   "client": "Client U",
+   "project": "Past project 087",
+   "budget": 32596.29,
+   "forecast": 39175.23,
+   "overrun": 0.202,
+   "yr": 2024
+  },
+  {
+   "client": "Client K",
+   "project": "Past project 088",
+   "budget": 33263.58,
+   "forecast": 35342.88,
+   "overrun": 0.063,
+   "yr": 2024
+  },
+  {
+   "client": "Client Z",
+   "project": "Past project 089",
+   "budget": 19575.0,
+   "forecast": 19582.83,
+   "overrun": 0.0,
+   "yr": 2024
+  },
+  {
+   "client": "Client K",
+   "project": "Past project 090",
+   "budget": 5176.5,
+   "forecast": 961.35,
+   "overrun": -0.814,
+   "yr": 2024
+  },
+  {
+   "client": "Client K",
+   "project": "Past project 091",
+   "budget": 4992.06,
+   "forecast": 1750.44,
+   "overrun": -0.649,
+   "yr": 2024
+  },
+  {
+   "client": "Client E",
+   "project": "Past project 092",
+   "budget": 8688.69,
+   "forecast": 7351.5,
+   "overrun": -0.154,
+   "yr": 2024
+  },
+  {
+   "client": "Client Z",
+   "project": "Past project 093",
+   "budget": 6264.0,
+   "forecast": 6230.07,
+   "overrun": -0.005,
+   "yr": 2024
+  },
+  {
+   "client": "Client AG",
+   "project": "Past project 094",
+   "budget": 13311.0,
+   "forecast": 12941.25,
+   "overrun": -0.028,
+   "yr": 2024
+  },
+  {
+   "client": "Client V",
+   "project": "Past project 095",
+   "budget": 2153.25,
+   "forecast": 2054.94,
+   "overrun": -0.045,
+   "yr": 2024
+  },
+  {
+   "client": "Client V",
+   "project": "Past project 096",
+   "budget": 11745.0,
+   "forecast": 10766.25,
+   "overrun": -0.083,
+   "yr": 2024
+  },
+  {
+   "client": "Client AG",
+   "project": "Past project 097",
+   "budget": 41551.2,
+   "forecast": 78849.84,
+   "overrun": 0.898,
+   "yr": 2024
+  },
+  {
+   "client": "Client H Group",
+   "project": "Past project 098",
+   "budget": 10962.0,
+   "forecast": 9647.43,
+   "overrun": -0.12,
+   "yr": 2024
+  },
+  {
+   "client": "Client V",
+   "project": "Past project 099",
+   "budget": 19575.0,
+   "forecast": 19575.0,
+   "overrun": 0.0,
+   "yr": 2024
+  },
+  {
+   "client": "Client H Group",
+   "project": "Past project 100",
+   "budget": 54810.0,
+   "forecast": 52098.21,
+   "overrun": -0.049,
+   "yr": 2025
+  },
+  {
+   "client": "Client H Group",
+   "project": "Past project 101",
+   "budget": 11745.0,
+   "forecast": 12649.8,
+   "overrun": 0.077,
+   "yr": 2025
+  },
+  {
+   "client": "Client U",
+   "project": "Past project 102",
+   "budget": 15855.75,
+   "forecast": 31041.6,
+   "overrun": 0.958,
+   "yr": 2024
+  },
+  {
+   "client": "Client Z",
+   "project": "Past project 103",
+   "budget": 7047.0,
+   "forecast": 6728.58,
+   "overrun": -0.045,
+   "yr": 2024
+  },
+  {
+   "client": "Client H Group",
+   "project": "Past project 104",
+   "budget": 8613.0,
+   "forecast": 7813.47,
+   "overrun": -0.093,
+   "yr": 2024
+  },
+  {
+   "client": "Client F",
+   "project": "Past project 105",
+   "budget": 10722.75,
+   "forecast": 14606.43,
+   "overrun": 0.362,
+   "yr": 2024
+  },
+  {
+   "client": "Client K",
+   "project": "Past project 106",
+   "budget": 49215.9,
+   "forecast": 43057.17,
+   "overrun": -0.125,
+   "yr": 2024
+  },
+  {
+   "client": "Client L",
+   "project": "Past project 107",
+   "budget": 17400.0,
+   "forecast": 16430.82,
+   "overrun": -0.056,
+   "yr": 2024
+  },
+  {
+   "client": "Client H Group",
+   "project": "Past project 108",
+   "budget": 7047.0,
+   "forecast": 7325.4,
+   "overrun": 0.039,
+   "yr": 2024
+  },
+  {
+   "client": "Client B",
+   "project": "Past project 109",
+   "budget": 7830.0,
+   "forecast": 5537.55,
+   "overrun": -0.293,
+   "yr": 2024
+  },
+  {
+   "client": "Client U",
+   "project": "Past project 110",
+   "budget": 5481.0,
+   "forecast": 6946.08,
+   "overrun": 0.267,
+   "yr": 2024
+  },
+  {
+   "client": "Client AE",
+   "project": "Past project 111",
+   "budget": 8762.64,
+   "forecast": 8544.27,
+   "overrun": -0.025,
+   "yr": 2024
+  },
+  {
+   "client": "Client D",
+   "project": "Past project 112",
+   "budget": 26230.5,
+   "forecast": 28971.0,
+   "overrun": 0.104,
+   "yr": 2025
+  },
+  {
+   "client": "Client U",
+   "project": "Past project 113",
+   "budget": 10179.0,
+   "forecast": 7854.36,
+   "overrun": -0.228,
+   "yr": 2024
+  },
+  {
+   "client": "Client Z",
+   "project": "Past project 114",
+   "budget": 4942.47,
+   "forecast": 5089.5,
+   "overrun": 0.03,
+   "yr": 2025
+  },
+  {
+   "client": "Client H Group",
+   "project": "Past project 115",
+   "budget": 13311.0,
+   "forecast": 14789.13,
+   "overrun": 0.111,
+   "yr": 2025
+  },
+  {
+   "client": "Client U",
+   "project": "Past project 116",
+   "budget": 8769.6,
+   "forecast": 11720.64,
+   "overrun": 0.336,
+   "yr": 2024
+  },
+  {
+   "client": "Client Z",
+   "project": "Past project 117",
+   "budget": 1566.0,
+   "forecast": 1614.72,
+   "overrun": 0.031,
+   "yr": 2025
+  },
+  {
+   "client": "Client AD",
+   "project": "Past project 118",
+   "budget": 35626.5,
+   "forecast": 75731.76,
+   "overrun": 1.126,
+   "yr": 2025
+  },
+  {
+   "client": "Client U",
+   "project": "Past project 119",
+   "budget": 3915.0,
+   "forecast": 4306.5,
+   "overrun": 0.1,
+   "yr": 2025
+  },
+  {
+   "client": "Client K",
+   "project": "Past project 120",
+   "budget": 14420.25,
+   "forecast": 6725.1,
+   "overrun": -0.534,
+   "yr": 2025
+  },
+  {
+   "client": "Client E Group",
+   "project": "Past project 121",
+   "budget": 13311.0,
+   "forecast": 17788.02,
+   "overrun": 0.336,
+   "yr": 2025
+  },
+  {
+   "client": "Client E Group",
+   "project": "Past project 122",
+   "budget": 18487.5,
+   "forecast": 16091.52,
+   "overrun": -0.13,
+   "yr": 2025
+  },
+  {
+   "client": "Client F",
+   "project": "Past project 123",
+   "budget": 2773.56,
+   "forecast": 2773.56,
+   "overrun": 0.0,
+   "yr": 2025
+  },
+  {
+   "client": "Client H Group",
+   "project": "Past project 124",
+   "budget": 11745.0,
+   "forecast": 12298.32,
+   "overrun": 0.047,
+   "yr": 2025
+  },
+  {
+   "client": "Client K",
+   "project": "Past project 125",
+   "budget": 6655.5,
+   "forecast": 3397.35,
+   "overrun": -0.49,
+   "yr": 2025
+  },
+  {
+   "client": "Client Z",
+   "project": "Past project 126",
+   "budget": 30928.5,
+   "forecast": 31172.97,
+   "overrun": 0.008,
+   "yr": 2025
+  },
+  {
+   "client": "Client J",
+   "project": "Past project 127",
+   "budget": 61933.56,
+   "forecast": 65230.86,
+   "overrun": 0.053,
+   "yr": 2025
+  },
+  {
+   "client": "Client F",
+   "project": "Past project 128",
+   "budget": 5656.74,
+   "forecast": 4221.24,
+   "overrun": -0.254,
+   "yr": 2025
+  },
+  {
+   "client": "Client L",
+   "project": "Past project 129",
+   "budget": 14094.0,
+   "forecast": 9574.35,
+   "overrun": -0.321,
+   "yr": 2025
+  },
+  {
+   "client": "Client E Group",
+   "project": "Past project 130",
+   "budget": 55092.75,
+   "forecast": 103785.78,
+   "overrun": 0.884,
+   "yr": 2025
+  },
+  {
+   "client": "Client B",
+   "project": "Past project 131",
+   "budget": 8613.0,
+   "forecast": 1834.83,
+   "overrun": -0.787,
+   "yr": 2025
+  },
+  {
+   "client": "Client U",
+   "project": "Past project 132",
+   "budget": 6655.5,
+   "forecast": 6351.87,
+   "overrun": -0.046,
+   "yr": 2025
+  },
+  {
+   "client": "Client U",
+   "project": "Past project 133",
+   "budget": 11353.5,
+   "forecast": 12748.11,
+   "overrun": 0.123,
+   "yr": 2025
+  },
+  {
+   "client": "Client E Group",
+   "project": "Past project 134",
+   "budget": 14790.0,
+   "forecast": 11624.07,
+   "overrun": -0.214,
+   "yr": 2025
+  },
+  {
+   "client": "Client Z",
+   "project": "Past project 135",
+   "budget": 7830.0,
+   "forecast": 7675.14,
+   "overrun": -0.02,
+   "yr": 2025
+  },
+  {
+   "client": "Client E Group",
+   "project": "Past project 136",
+   "budget": 3697.5,
+   "forecast": 3859.32,
+   "overrun": 0.044,
+   "yr": 2025
+  },
+  {
+   "client": "Client D",
+   "project": "Past project 137",
+   "budget": 5676.75,
+   "forecast": 2104.53,
+   "overrun": -0.629,
+   "yr": 2025
+  },
+  {
+   "client": "Client H",
+   "project": "Past project 138",
+   "budget": 21141.0,
+   "forecast": 20880.0,
+   "overrun": -0.012,
+   "yr": 2025
+  },
+  {
+   "client": "Client B",
+   "project": "Past project 139",
+   "budget": 6264.0,
+   "forecast": 1957.5,
+   "overrun": -0.688,
+   "yr": 2025
+  },
+  {
+   "client": "Client AG",
+   "project": "Past project 140",
+   "budget": 4872.0,
+   "forecast": 6638.1,
+   "overrun": 0.362,
+   "yr": 2025
+  },
+  {
+   "client": "Client K",
+   "project": "Past project 141",
+   "budget": 3915.0,
+   "forecast": 3220.74,
+   "overrun": -0.177,
+   "yr": 2025
+  },
+  {
+   "client": "Client E Group",
+   "project": "Past project 142",
+   "budget": 3523.5,
+   "forecast": 3450.42,
+   "overrun": -0.021,
+   "yr": 2026
+  },
+  {
+   "client": "Client E Group",
+   "project": "Past project 143",
+   "budget": 27209.25,
+   "forecast": 37429.14,
+   "overrun": 0.376,
+   "yr": 2026
+  },
+  {
+   "client": "Client E Group",
+   "project": "Past project 144",
+   "budget": 17226.0,
+   "forecast": 16533.48,
+   "overrun": -0.04,
+   "yr": 2026
+  },
+  {
+   "client": "Client A",
+   "project": "Past project 145",
+   "budget": 3915.0,
+   "forecast": 4966.83,
+   "overrun": 0.269,
+   "yr": 2025
+  },
+  {
+   "client": "Client A",
+   "project": "Past project 146",
+   "budget": 10962.0,
+   "forecast": 11156.88,
+   "overrun": 0.018,
+   "yr": 2026
+  },
+  {
+   "client": "Client E Group",
+   "project": "Past project 147",
+   "budget": 3697.5,
+   "forecast": 4241.25,
+   "overrun": 0.147,
+   "yr": 2026
+  },
+  {
+   "client": "Client AC",
+   "project": "Past project 148",
+   "budget": 1413.75,
+   "forecast": 1590.36,
+   "overrun": 0.125,
+   "yr": 2026
+  },
+  {
+   "client": "Client E Group",
+   "project": "Past project 149",
+   "budget": 3915.0,
+   "forecast": 3915.0,
+   "overrun": 0.0,
+   "yr": 2026
+  },
+  {
+   "client": "Client F",
+   "project": "Past project 150",
+   "budget": 5872.5,
+   "forecast": 3963.72,
+   "overrun": -0.325,
+   "yr": 2026
+  },
+  {
+   "client": "Client AH",
+   "project": "Past project 151",
+   "budget": 51504.0,
+   "forecast": 65725.02,
+   "overrun": 0.276,
+   "yr": 2026
+  },
+  {
+   "client": "Client K",
+   "project": "Past project 152",
+   "budget": 12671.55,
+   "forecast": 12500.16,
+   "overrun": -0.013,
+   "yr": 2026
+  },
+  {
+   "client": "Client AE",
+   "project": "Past project 153",
+   "budget": 10505.25,
+   "forecast": 11372.64,
+   "overrun": 0.083,
+   "yr": 2026
+  },
+  {
+   "client": "Client L",
+   "project": "Past project 154",
+   "budget": 17769.75,
+   "forecast": 33945.66,
+   "overrun": 0.91,
+   "yr": 2026
+  },
+  {
+   "client": "Client I",
+   "project": "Past project 155",
+   "budget": 20706.0,
+   "forecast": 25882.5,
+   "overrun": 0.25,
+   "yr": 2026
+  },
+  {
+   "client": "Client F",
+   "project": "Past project 156",
+   "budget": 22707.0,
+   "forecast": 46089.99,
+   "overrun": 1.03,
+   "yr": 2026
+  },
+  {
+   "client": "Client A",
+   "project": "Past project 157",
+   "budget": 58333.5,
+   "forecast": 67794.75,
+   "overrun": 0.162,
+   "yr": 2026
+  },
+  {
+   "client": "Client I",
+   "project": "Past project 158",
+   "budget": 51395.25,
+   "forecast": 39918.21,
+   "overrun": -0.223,
+   "yr": 2026
+  }
+ ],
+ "contracts": [
+  {
+   "name": "Client K SLA (Q4 Oct - Dec 2026)",
+   "client": "Client K",
+   "type": "SLA",
+   "budget": 9396.0,
+   "adj": 0.0,
+   "used": 284.82,
+   "pctUsed": 0.0303,
+   "pctElapsed": 0.197,
+   "days": 12,
+   "remainingDays": 11.64,
+   "dayRate": 783.0,
+   "pm": "Marc",
+   "am": "Kat",
+   "cycleStart": "2026-10-01",
+   "cycleEnd": "2026-12-31",
+   "contractEnd": "2026-09-30",
+   "carry": "No",
+   "notes": "15% premium on any additional SLA time purchased"
+  },
+  {
+   "name": "Client D SLA (Q4 Oct - Dec 2026)",
+   "client": "Client D",
+   "type": "SLA",
+   "budget": 4959.0,
+   "adj": 0.0,
+   "used": 446.31,
+   "pctUsed": 0.09,
+   "pctElapsed": 0.197,
+   "days": 6,
+   "remainingDays": 5.46,
+   "dayRate": 826.5,
+   "pm": "Marc",
+   "am": "Olivia",
+   "cycleStart": "2026-10-01",
+   "cycleEnd": "2026-12-31",
+   "contractEnd": "2026-06-30",
+   "carry": "No",
+   "notes": ""
+  },
+  {
+   "name": "Client J SLA 2026",
+   "client": "Client J",
+   "type": "SLA",
+   "budget": 9396.0,
+   "adj": 0.0,
+   "used": 5770.71,
+   "pctUsed": 0.6142,
+   "pctElapsed": 0.7969,
+   "days": 12,
+   "remainingDays": 4.63,
+   "dayRate": 783.0,
+   "pm": "Beth",
+   "am": "Olivia",
+   "cycleStart": "2026-01-01",
+   "cycleEnd": "2026-12-31",
+   "contractEnd": "2026-12-31",
+   "carry": "No",
+   "notes": "Tracking against whole year budget and not Q1-4"
+  },
+  {
+   "name": "Client F Group SLA (Q4 2026)",
+   "client": "Client F",
+   "type": "SLA",
+   "budget": 4698.0,
+   "adj": 0.0,
+   "used": 880.88,
+   "pctUsed": 0.1875,
+   "pctElapsed": 0.197,
+   "days": 6,
+   "remainingDays": 4.88,
+   "dayRate": 783.0,
+   "pm": "Beth",
+   "am": "Harry",
+   "cycleStart": "2026-10-01",
+   "cycleEnd": "2026-12-31",
+   "contractEnd": "2026-06-30",
+   "carry": "No",
+   "notes": ""
+  },
+  {
+   "name": "Client L SLA (Q4 Oct - Dec 2026)",
+   "client": "Client L",
+   "type": "SLA",
+   "budget": 4959.0,
+   "adj": 0.0,
+   "used": 67.16,
+   "pctUsed": 0.0135,
+   "pctElapsed": 0.197,
+   "days": 6,
+   "remainingDays": 5.92,
+   "dayRate": 826.5,
+   "pm": "Marc",
+   "am": "Olivia",
+   "cycleStart": "2026-10-01",
+   "cycleEnd": "2026-12-31",
+   "contractEnd": "2026-12-31",
+   "carry": "No",
+   "notes": ""
+  },
+  {
+   "name": "Client E SLA (Q4 2026)",
+   "client": "Client E",
+   "type": "SLA",
+   "budget": 7047.0,
+   "adj": 0.0,
+   "used": 611.72,
+   "pctUsed": 0.0868,
+   "pctElapsed": 0.197,
+   "days": 9,
+   "remainingDays": 8.22,
+   "dayRate": 783.0,
+   "pm": "Marc",
+   "am": "Olivia",
+   "cycleStart": "2026-10-01",
+   "cycleEnd": "2026-12-31",
+   "contractEnd": "2026-06-30",
+   "carry": "Can carry over 25% of unused",
+   "notes": ""
+  },
+  {
+   "name": "Client H - SLA Q4 2026",
+   "client": "Client H",
+   "type": "SLA",
+   "budget": 7438.5,
+   "adj": 0.0,
+   "used": 129.14,
+   "pctUsed": 0.0174,
+   "pctElapsed": 0.197,
+   "days": 9,
+   "remainingDays": 8.84,
+   "dayRate": 826.5,
+   "pm": "Beth",
+   "am": "Harry",
+   "cycleStart": "2026-10-01",
+   "cycleEnd": "2026-12-31",
+   "contractEnd": "2026-12-31",
+   "carry": "No",
+   "notes": ""
+  },
+  {
+   "name": "Client I SLA (Q3-4 August - November)",
+   "client": "Client I",
+   "type": "SLA",
+   "budget": 4437.0,
+   "adj": 0.0,
+   "used": 3297.25,
+   "pctUsed": 0.7431,
+   "pctElapsed": 0.6212,
+   "days": 6,
+   "remainingDays": 1.54,
+   "dayRate": 739.5,
+   "pm": "Marc",
+   "am": "Harry",
+   "cycleStart": "2026-08-22",
+   "cycleEnd": "2026-11-23",
+   "contractEnd": "2029-04-27",
+   "carry": "No",
+   "notes": ""
+  },
+  {
+   "name": "Client A MSA Q4 2026",
+   "client": "Client A",
+   "type": "SLA",
+   "budget": 8613.0,
+   "adj": 0.0,
+   "used": 1272.38,
+   "pctUsed": 0.1477,
+   "pctElapsed": 0.197,
+   "days": 11,
+   "remainingDays": 9.38,
+   "dayRate": 783.0,
+   "pm": "Beth",
+   "am": "Harry",
+   "cycleStart": "2026-10-01",
+   "cycleEnd": "2026-12-31",
+   "contractEnd": "2026-12-31",
+   "carry": null,
+   "notes": ""
+  },
+  {
+   "name": "Client B SLA (Q3-4 August - November 2026)",
+   "client": "Client B",
+   "type": "SLA",
+   "budget": 7047.0,
+   "adj": 0.0,
+   "used": 2903.96,
+   "pctUsed": 0.4121,
+   "pctElapsed": 0.6212,
+   "days": 9,
+   "remainingDays": 5.29,
+   "dayRate": 783.0,
+   "pm": "Marc",
+   "am": "Olivia",
+   "cycleStart": "2026-08-24",
+   "cycleEnd": "2026-11-23",
+   "contractEnd": "2027-02-23",
+   "carry": "No",
+   "notes": ""
+  },
+  {
+   "name": "Client G SLA 2026",
+   "client": "Client G",
+   "type": "SLA",
+   "budget": 2192.4,
+   "adj": 0.0,
+   "used": 4237.88,
+   "pctUsed": 1.933,
+   "pctElapsed": 0.6314,
+   "days": 3.6,
+   "remainingDays": -3.36,
+   "dayRate": 609.0,
+   "pm": "Beth",
+   "am": "Kat",
+   "cycleStart": "2026-03-09",
+   "cycleEnd": "2027-02-28",
+   "contractEnd": "2027-02-28",
+   "carry": "Can carry over 25% of unused",
+   "notes": ""
+  },
+  {
+   "name": "Client D Ltd (Q4 Oct - Dec 2026)",
+   "client": "Client D",
+   "type": "Retainer",
+   "budget": 8265.0,
+   "adj": 0.0,
+   "used": 2014.6,
+   "pctUsed": 0.2438,
+   "pctElapsed": 0.197,
+   "days": 10,
+   "remainingDays": 7.56,
+   "dayRate": 826.5,
+   "pm": "Marc",
+   "am": "Olivia",
+   "cycleStart": "2026-10-01",
+   "cycleEnd": "2026-12-31",
+   "contractEnd": "2026-06-30",
+   "carry": "Can carry over 25% of unused",
+   "notes": ""
+  },
+  {
+   "name": "Client F Group Retainer (Q4 2026)",
+   "client": "Client F",
+   "type": "Retainer",
+   "budget": 3915.0,
+   "adj": 0.0,
+   "used": 0.0,
+   "pctUsed": 0.0,
+   "pctElapsed": 0.197,
+   "days": 5,
+   "remainingDays": 5,
+   "dayRate": 783.0,
+   "pm": "Beth",
+   "am": "Harry",
+   "cycleStart": "2026-10-01",
+   "cycleEnd": "2026-12-31",
+   "contractEnd": "2026-06-30",
+   "carry": "Can carry over 25% of unused",
+   "notes": ""
+  },
+  {
+   "name": "Client E BAU Retainer (Q4 Oct - Dec 2026)",
+   "client": "Client E",
+   "type": "Retainer",
+   "budget": 3915.0,
+   "adj": 0.0,
+   "used": 0.0,
+   "pctUsed": 0.0,
+   "pctElapsed": 0.197,
+   "days": 5,
+   "remainingDays": 5,
+   "dayRate": 783.0,
+   "pm": "Marc",
+   "am": "Olivia",
+   "cycleStart": "2026-10-01",
+   "cycleEnd": "2026-12-31",
+   "contractEnd": "2026-06-30",
+   "carry": "Can carry over 25% of unused",
+   "notes": ""
+  },
+  {
+   "name": "Client E CRM Retainer  (Q4 Oct - Dec 2026)",
+   "client": "Client E",
+   "type": "Retainer",
+   "budget": 11745.0,
+   "adj": 0.0,
+   "used": 0.0,
+   "pctUsed": 0.0,
+   "pctElapsed": 0.197,
+   "days": 77,
+   "remainingDays": 15,
+   "dayRate": 783.0,
+   "pm": "Marc",
+   "am": "Olivia",
+   "cycleStart": "2026-10-01",
+   "cycleEnd": "2026-12-31",
+   "contractEnd": "2026-09-21",
+   "carry": "Yes",
+   "notes": ""
+  },
+  {
+   "name": "Client H - H2 Backlog 2026",
+   "client": "Client H",
+   "type": "Retainer",
+   "budget": 24795.0,
+   "adj": 0.0,
+   "used": 51.66,
+   "pctUsed": 0.0021,
+   "pctElapsed": 0.5985,
+   "days": 35,
+   "remainingDays": 29.94,
+   "dayRate": 826.5,
+   "pm": "Beth",
+   "am": "Harry",
+   "cycleStart": "2026-07-01",
+   "cycleEnd": "2026-12-31",
+   "contractEnd": "2026-03-31",
+   "carry": null,
+   "notes": ""
+  },
+  {
+   "name": "Client H - Q4 Maintenance 2026",
+   "client": "Client H",
+   "type": "Retainer",
+   "budget": 4959.0,
+   "adj": 0.0,
+   "used": 0.0,
+   "pctUsed": 0.0,
+   "pctElapsed": 0.197,
+   "days": 6,
+   "remainingDays": 6,
+   "dayRate": 826.5,
+   "pm": "Beth",
+   "am": "Harry",
+   "cycleStart": "2026-10-01",
+   "cycleEnd": "2026-12-31",
+   "contractEnd": "2026-03-31",
+   "carry": null,
+   "notes": ""
+  },
+  {
+   "name": "Client A Retainer Q1-4 2026",
+   "client": "Client A",
+   "type": "Retainer",
+   "budget": 36409.5,
+   "adj": -9396.0,
+   "used": 24688.97,
+   "pctUsed": 0.9139,
+   "pctElapsed": 0.197,
+   "days": 15,
+   "remainingDays": 2.97,
+   "dayRate": 783.0,
+   "pm": "Beth",
+   "am": "Harry",
+   "cycleStart": "2026-10-01",
+   "cycleEnd": "2026-12-31",
+   "contractEnd": "2026-12-31",
+   "carry": null,
+   "notes": "Tracking against Q1-3 budget"
+  }
+ ],
+ "health": {
+  "Client D": {
+   "Desktop - Performance": 0.8,
+   "Desktop - Accessibility": 0.95,
+   "Desktop - Best Practice": 1,
+   "Desktop - SEO": 0.92,
+   "Mobile - Performance": 0.59,
+   "Mobile - Accessibility": 0.96,
+   "Mobile - Best Practice": 0.96,
+   "Mobile - SEO": 0.92,
+   "Security Headers": "A (-1)",
+   "Carbon": "D",
+   "Ecograder": 63
+  },
+  "Client J": {
+   "Desktop - Performance": 0.89,
+   "Desktop - Accessibility": 1,
+   "Desktop - Best Practice": 0.92,
+   "Desktop - SEO": 1,
+   "Mobile - Performance": 0.61,
+   "Mobile - Accessibility": 1,
+   "Mobile - Best Practice": 0.92,
+   "Mobile - SEO": 1,
+   "Security Headers": "A",
+   "Carbon": "B",
+   "Ecograder": 62
+  },
+  "Client F Group": {
+   "Desktop - Performance": 0.55,
+   "Desktop - Accessibility": 0.86,
+   "Desktop - Best Practice": 0.96,
+   "Desktop - SEO": 0.85,
+   "Mobile - Performance": 0.28,
+   "Mobile - Accessibility": 0.9,
+   "Mobile - Best Practice": 0.96,
+   "Mobile - SEO": 0.85,
+   "Security Headers": "A (-1)",
+   "Carbon": "C",
+   "Ecograder": 67
+  },
+  "Client L": {
+   "Desktop - Performance": 0.84,
+   "Desktop - Accessibility": 0.95,
+   "Desktop - Best Practice": 0.96,
+   "Desktop - SEO": 1,
+   "Mobile - Performance": 0.47,
+   "Mobile - Accessibility": 0.95,
+   "Mobile - Best Practice": 0.96,
+   "Mobile - SEO": 1,
+   "Security Headers": "F",
+   "Carbon": "B",
+   "Ecograder": 73
+  },
+  "Client E": {},
+  "Client H": {
+   "Desktop - Performance": 0.64,
+   "Desktop - Accessibility": 0.97,
+   "Desktop - Best Practice": 0.73,
+   "Desktop - SEO": 0.92,
+   "Mobile - Performance": 0.43,
+   "Mobile - Accessibility": 0.93,
+   "Mobile - Best Practice": 0.73,
+   "Mobile - SEO": 0.92,
+   "Security Headers": "A+",
+   "SEO & SSL Checks": "B",
+   "Carbon": 74
+  },
+  "Client I": {
+   "Desktop - Performance": 0.86,
+   "Desktop - Accessibility": 1,
+   "Desktop - Best Practice": 0.73,
+   "Desktop - SEO": 0.92,
+   "Mobile - Performance": 0.56,
+   "Mobile - Accessibility": 0.97,
+   "Mobile - Best Practice": 0.73,
+   "Mobile - SEO": 0.92,
+   "Security Headers": "A (-1)"
+  },
+  "Client A": {},
+  "Client G": {
+   "Desktop - Performance": 0.95,
+   "Desktop - Accessibility": 0.9,
+   "Desktop - Best Practice": 0.96,
+   "Desktop - SEO": 0.4,
+   "Security Headers": "A",
+   "Carbon": "A"
+  }
+ },
+ "payments": [
+  {
+   "client": "Client K",
+   "item": "SLA",
+   "am": "Kat",
+   "month": "Nov",
+   "week": 3,
+   "amount": 10335.6
+  },
+  {
+   "client": "Client D",
+   "item": "Umbraco cloud (renewed annually)",
+   "am": "Harry",
+   "month": "Oct",
+   "week": 2,
+   "amount": 4236.9
+  },
+  {
+   "client": "Client D",
+   "item": "SLA",
+   "am": "Harry",
+   "month": "Nov",
+   "week": 4,
+   "amount": 4959.0
+  },
+  {
+   "client": "Client D",
+   "item": "Retainer",
+   "am": "",
+   "month": "Nov",
+   "week": 4,
+   "amount": 8265.0
+  },
+  {
+   "client": "Client J",
+   "item": "SLA",
+   "am": "Kat",
+   "month": "Oct",
+   "week": 1,
+   "amount": 9918.0
+  },
+  {
+   "client": "Client J",
+   "item": "Umbraco v.17 upgrade",
+   "am": "Kat",
+   "month": "Oct",
+   "week": 3,
+   "amount": 18137.54
+  },
+  {
+   "client": "Client J",
+   "item": "Umbraco v.17 upgrade",
+   "am": "Kat",
+   "month": "Oct",
+   "week": 4,
+   "amount": 10580.23
+  },
+  {
+   "client": "Client F Ltd",
+   "item": "SLA",
+   "am": "Harry",
+   "month": "Nov",
+   "week": 2,
+   "amount": 4698.0
+  },
+  {
+   "client": "Client F Ltd",
+   "item": "Retainer",
+   "am": "Harry",
+   "month": "Nov",
+   "week": 2,
+   "amount": 3915.0
+  },
+  {
+   "client": "Client F Ltd",
+   "item": "Website Improvement",
+   "am": "",
+   "month": "Oct",
+   "week": 4,
+   "amount": 13050.0
+  },
+  {
+   "client": "Client F Ltd",
+   "item": "SEO Retainer",
+   "am": "",
+   "month": "Nov",
+   "week": 1,
+   "amount": 4698.0
+  },
+  {
+   "client": "Client L",
+   "item": "SLA",
+   "am": "Kat",
+   "month": "Nov",
+   "week": 2,
+   "amount": 4959.0
+  },
+  {
+   "client": "Client L",
+   "item": "Umbraco cloud (renewed annually)",
+   "am": "Kat",
+   "month": "Nov",
+   "week": 2,
+   "amount": 4236.9
+  },
+  {
+   "client": "Client E Group",
+   "item": "SLA",
+   "am": "Beth",
+   "month": "Nov",
+   "week": 4,
+   "amount": 7047.0
+  },
+  {
+   "client": "Client E Group",
+   "item": "retainer",
+   "am": "Beth",
+   "month": "Nov",
+   "week": 4,
+   "amount": 3915.0
+  },
+  {
+   "client": "Client E Group",
+   "item": "Change requests",
+   "am": "Beth",
+   "month": "Nov",
+   "week": 3,
+   "amount": 8700.0
+  },
+  {
+   "client": "Client E Group",
+   "item": "CRM retainer [27 > 13.5 for invs 3+4]",
+   "am": "Beth",
+   "month": "Nov",
+   "week": 4,
+   "amount": 11745.0
+  },
+  {
+   "client": "Client E Group",
+   "item": "Manifesto handover",
+   "am": "Beth",
+   "month": "Nov",
+   "week": 1,
+   "amount": 4350.0
+  },
+  {
+   "client": "Client H",
+   "item": "SLA",
+   "am": "Harry",
+   "month": "Nov",
+   "week": 2,
+   "amount": 7438.5
+  },
+  {
+   "client": "Client H",
+   "item": "Retainer",
+   "am": "Harry",
+   "month": "Nov",
+   "week": 2,
+   "amount": 33886.5
+  },
+  {
+   "client": "Client H",
+   "item": "CMS AI Enhancement",
+   "am": "Harry",
+   "month": "Nov",
+   "week": 1,
+   "amount": 4350.0
+  },
+  {
+   "client": "Client M",
+   "item": ".NET Upgrade",
+   "am": "Kat",
+   "month": "Nov",
+   "week": 4,
+   "amount": 17400.0
+  },
+  {
+   "client": "Client M",
+   "item": ".NET Upgrade",
+   "am": "Kat",
+   "month": "Dec",
+   "week": 4,
+   "amount": 13050.0
+  },
+  {
+   "client": "Client M",
+   "item": "SLA",
+   "am": "Kat",
+   "month": "Oct",
+   "week": 1,
+   "amount": 5220.0
+  },
+  {
+   "client": "Client A",
+   "item": "Retainer",
+   "am": "Harry",
+   "month": "Dec",
+   "week": 2,
+   "amount": 11745.0
+  },
+  {
+   "client": "Client A",
+   "item": "SLA",
+   "am": "Harry",
+   "month": "Dec",
+   "week": 2,
+   "amount": 8613.0
+  },
+  {
+   "client": "Client A",
+   "item": "Website Performance Improvement",
+   "am": "Harry",
+   "month": "Nov",
+   "week": 2,
+   "amount": 28275.0
+  },
+  {
+   "client": "Client A",
+   "item": "Client Area Project",
+   "am": "Harry",
+   "month": "Dec",
+   "week": 1,
+   "amount": 13050.0
+  },
+  {
+   "client": "Client B",
+   "item": "SLA",
+   "am": "Harry",
+   "month": "Nov",
+   "week": 4,
+   "amount": 31946.4
+  },
+  {
+   "client": "Client B",
+   "item": "New Claims requirement",
+   "am": "Harry",
+   "month": "Oct",
+   "week": 4,
+   "amount": 8700.0
+  },
+  {
+   "client": "Client B",
+   "item": "phase 2 migration CR",
+   "am": "Harry",
+   "month": "Oct",
+   "week": 1,
+   "amount": 6776.95
+  },
+  {
+   "client": "Client G Group",
+   "item": "Support",
+   "am": "Kat",
+   "month": "Dec",
+   "week": 2,
+   "amount": 2192.4
+  },
+  {
+   "client": "Client I",
+   "item": "Retainer",
+   "am": "Harry",
+   "month": "Nov",
+   "week": 4,
+   "amount": 11092.5
+  },
+  {
+   "client": "Client I",
+   "item": "Umbraco Cloud",
+   "am": "Harry",
+   "month": "Oct",
+   "week": 4,
+   "amount": 19000.8
+  },
+  {
+   "client": "Client I",
+   "item": "Cloud Migration",
+   "am": "Harry",
+   "month": "Nov",
+   "week": 1,
+   "amount": 18015.09
+  },
+  {
+   "client": "Client I",
+   "item": "Cloud Migration",
+   "am": "Harry",
+   "month": "Nov",
+   "week": 4,
+   "amount": 18015.09
+  },
+  {
+   "client": "Client I",
+   "item": "Hosting",
+   "am": "Harry",
+   "month": "Oct",
+   "week": 3,
+   "amount": 14254.95
+  },
+  {
+   "client": "Client I",
+   "item": "SLA",
+   "am": "Harry",
+   "month": "Oct",
+   "week": 3,
+   "amount": 11092.5
+  },
+  {
+   "client": "Client N",
+   "item": "SEO Audit",
+   "am": "Harry",
+   "month": "Nov",
+   "week": 4,
+   "amount": 4350.0
+  },
+  {
+   "client": "Client N",
+   "item": "SEO Retainer",
+   "am": "Harry",
+   "month": "Oct",
+   "week": 4,
+   "amount": 7395.0
+  },
+  {
+   "client": "Client N",
+   "item": "SEO Retainer",
+   "am": "Harry",
+   "month": "Nov",
+   "week": 4,
+   "amount": 4350.0
+  },
+  {
+   "client": "Client O",
+   "item": "Website Deposit",
+   "am": "Harry",
+   "month": "Oct",
+   "week": 1,
+   "amount": 25095.15
+  },
+  {
+   "client": "Client O",
+   "item": "Milestone 2",
+   "am": "Harry",
+   "month": "Nov",
+   "week": 1,
+   "amount": 12547.14
+  },
+  {
+   "client": "Client O",
+   "item": "Milestone 3",
+   "am": "Harry",
+   "month": "Dec",
+   "week": 2,
+   "amount": 12547.14
+  },
+  {
+   "client": "Client C",
+   "item": "Immersion, Define, Design",
+   "am": "Harry",
+   "month": "Oct",
+   "week": 2,
+   "amount": 12484.5
+  },
+  {
+   "client": "Client C",
+   "item": "Development Payment",
+   "am": "Harry",
+   "month": "Nov",
+   "week": 1,
+   "amount": 6242.25
+  },
+  {
+   "client": "Client R Group",
+   "item": "SLA",
+   "am": "Leo",
+   "month": "Oct",
+   "week": 2,
+   "amount": 7830.0
+  },
+  {
+   "client": "Client Q",
+   "item": "SLA",
+   "am": "Leo",
+   "month": "Nov",
+   "week": 3,
+   "amount": 4176.0
+  },
+  {
+   "client": "Client AI",
+   "item": "Licence renewal",
+   "am": "Leo",
+   "month": "Dec",
+   "week": 4,
+   "amount": 41842.83
+  },
+  {
+   "client": "Client S Group",
+   "item": "(no project name in sheet)",
+   "am": "Leo",
+   "month": "Oct",
+   "week": 2,
+   "amount": 7830.0
+  },
+  {
+   "client": "Client S Group",
+   "item": "(no project name in sheet)",
+   "am": "Leo",
+   "month": "Nov",
+   "week": 3,
+   "amount": 4176.0
+  },
+  {
+   "client": "Client S Group",
+   "item": "(no project name in sheet)",
+   "am": "Leo",
+   "month": "Dec",
+   "week": 4,
+   "amount": 41842.83
+  },
+  {
+   "client": "Client S Group",
+   "item": "(no project name in sheet)",
+   "am": "Leo",
+   "month": "Oct",
+   "week": 4,
+   "amount": 7830.0
+  },
+  {
+   "client": "Client S Group",
+   "item": "(no project name in sheet)",
+   "am": "Leo",
+   "month": "Nov",
+   "week": 4,
+   "amount": 4176.0
+  },
+  {
+   "client": "Client S Group",
+   "item": "(no project name in sheet)",
+   "am": "Leo",
+   "month": "Dec",
+   "week": 4,
+   "amount": 41842.83
+  }
+ ],
+ "closures": [
+  {
+   "project": "Client E payment gateway",
+   "client": "Client E",
+   "pm": "Marc",
+   "type": "Integration",
+   "reported": "2026-04-23",
+   "estDays": 29.75,
+   "actDays": 39.83,
+   "estBudget": 23294.25,
+   "actBudget": 31189.82,
+   "nonBillableDays": 5.22,
+   "finishSlipDays": 13,
+   "profit": 7699.33,
+   "satisfaction": null
+  },
+  {
+   "project": "Client L Umbraco v13 to v17 upgrade",
+   "client": "Client L",
+   "pm": "Marc",
+   "type": "Umbraco upgrade",
+   "reported": "2026-07-21",
+   "estDays": 21.5,
+   "actDays": 46.74,
+   "estBudget": 17769.75,
+   "actBudget": 29725.07,
+   "nonBillableDays": 3.68,
+   "finishSlipDays": 16,
+   "profit": -528.96,
+   "satisfaction": null
+  },
+  {
+   "project": "Client G Umbraco Cloud rebuild",
+   "client": "Client G",
+   "pm": "Beth",
+   "type": "Umbraco rebuild",
+   "reported": "2026-04-27",
+   "estDays": null,
+   "actDays": 48.85,
+   "estBudget": null,
+   "actBudget": null,
+   "nonBillableDays": 47.23,
+   "finishSlipDays": 0,
+   "profit": -18490.54,
+   "satisfaction": null
+  }
+ ],
+ "lessons": [
+  {
+   "project": "Client L Umbraco v13 to v17 upgrade",
+   "client": "Client L",
+   "cat": "Estimation",
+   "owner": "MS",
+   "issue": "A task for 'Migration of nested content to block list' was missed from the original estimate.",
+   "impact": "5 days of extra effort that could have been billed in the original estimate.",
+   "action": "Highlighted to the sales team so the task is not missed in future upgrade estimates."
+  },
+  {
+   "project": "Client L Umbraco v13 to v17 upgrade",
+   "client": "Client L",
+   "cat": "Estimation",
+   "owner": "MS",
+   "issue": "QA was sold at 3 days, which only covered release 1 of a two-release upgrade.",
+   "impact": "Extra QA effort contributed to the overburn and pulled QA time from other projects.",
+   "action": "Two-phase projects need a QA allocation per phase."
+  },
+  {
+   "project": "Client L Umbraco v13 to v17 upgrade",
+   "client": "Client L",
+   "cat": "Estimation",
+   "owner": "MS",
+   "issue": "No tech lead budget was sold, and only 1 day of deployment for a two-release approach.",
+   "impact": "Tech lead support and a second deployment were added without budget.",
+   "action": "All projects should have a tech lead allocation and one deployment allocation per production release. PMs to check SOWs."
+  },
+  {
+   "project": "Client L Umbraco v13 to v17 upgrade",
+   "client": "Client L",
+   "cat": "Platform",
+   "owner": "MS",
+   "issue": "The TipTap rich text editor in Umbraco v17 has known restrictions and defects.",
+   "impact": "A lot of time was spent fixing rich text editor issues.",
+   "action": "Check client requirements (e.g. iframes) against TipTap, and check the latest Umbraco version for fixes before committing."
+  },
+  {
+   "project": "Client L Umbraco v13 to v17 upgrade",
+   "client": "Client L",
+   "cat": "QA",
+   "owner": "MS",
+   "issue": "Playwright IP had to be whitelisted by Umbraco to reach QA and staging environments.",
+   "impact": "QA activities were blocked until it was resolved.",
+   "action": "QA should request Umbraco whitelisting ahead of project kick-off."
+  },
+  {
+   "project": "Client L Umbraco v13 to v17 upgrade",
+   "client": "Client L",
+   "cat": "QA",
+   "owner": "MS",
+   "issue": "Client UAT in preview mode found bugs our QA had missed.",
+   "impact": "Delays in UAT.",
+   "action": "Consider testing in preview mode as part of QA."
+  },
+  {
+   "project": "Client L Umbraco v13 to v17 upgrade",
+   "client": "Client L",
+   "cat": "Platform",
+   "owner": "MS",
+   "issue": "Migrating nested content to block list was slow.",
+   "impact": "Risk of more unbudgeted cost.",
+   "action": "SQL scripts cut the media picker migration to 1.5 days. Reuse this approach on future upgrades."
+  },
+  {
+   "project": "Client E payment gateway",
+   "client": "Client E",
+   "cat": "Third party",
+   "owner": "MS",
+   "issue": "The payment gateway was an early product release and versions changed during the project without notice.",
+   "impact": "Confusion over which features were available.",
+   "action": "Watch-out only."
+  },
+  {
+   "project": "Client E payment gateway",
+   "client": "Client E",
+   "cat": "Third party",
+   "owner": "MS",
+   "issue": "Third-party production environments arrived late.",
+   "impact": "Unplanned extended hours close to release and compressed final validation.",
+   "action": "Secure production or production-like environments as early as possible on integration projects."
+  },
+  {
+   "project": "Client G Umbraco Cloud rebuild",
+   "client": "Client G",
+   "cat": "Third party",
+   "owner": "VA",
+   "issue": "First use of the vehicle listings API; time was needed to learn how it works and what data it returns.",
+   "impact": "Affected the car stock listing and stock availability pages.",
+   "action": "vehicle listings needs to technically validate an integration before production API access is granted. Plan for this on similar clients."
+  },
+  {
+   "project": "Client G Umbraco Cloud rebuild",
+   "client": "Client G",
+   "cat": "Platform",
+   "owner": "VA",
+   "issue": "Reusable modules could output a default H1 wherever they were placed.",
+   "impact": "Risk of broken heading hierarchy and SEO problems.",
+   "action": "Added a backoffice toggle on multi-use components so editors choose whether the title is an H1."
+  },
+  {
+   "project": "Client G Umbraco Cloud rebuild",
+   "client": "Client G",
+   "cat": "Estimation",
+   "owner": "BM",
+   "issue": "The build was meant to be like-for-like but the approved redesign was implemented during the rebuild.",
+   "impact": "Scope grew; closure report shows 47 non-billable days and no baseline estimate.",
+   "action": "Re-baseline the estimate when scope changes before build starts."
+  }
+ ],
+ "float": {
+  "dummy": true,
+  "people": [
+   {
+    "name": "Developer A",
+    "role": "Developer",
+    "billable": 82,
+    "scheduled": 96,
+    "nonBillable": 14
+   },
+   {
+    "name": "Developer B",
+    "role": "Developer",
+    "billable": 76,
+    "scheduled": 92,
+    "nonBillable": 16
+   },
+   {
+    "name": "Developer C",
+    "role": "Developer",
+    "billable": 64,
+    "scheduled": 85,
+    "nonBillable": 21
+   },
+   {
+    "name": "Developer D",
+    "role": "Developer",
+    "billable": 88,
+    "scheduled": 100,
+    "nonBillable": 12
+   },
+   {
+    "name": "Tech lead A",
+    "role": "Tech lead",
+    "billable": 58,
+    "scheduled": 90,
+    "nonBillable": 32
+   },
+   {
+    "name": "Tech lead B",
+    "role": "Tech lead",
+    "billable": 61,
+    "scheduled": 88,
+    "nonBillable": 27
+   },
+   {
+    "name": "QA A",
+    "role": "QA",
+    "billable": 71,
+    "scheduled": 94,
+    "nonBillable": 23
+   },
+   {
+    "name": "PM A",
+    "role": "Project manager",
+    "billable": 52,
+    "scheduled": 80,
+    "nonBillable": 28
+   },
+   {
+    "name": "PM B",
+    "role": "Project manager",
+    "billable": 49,
+    "scheduled": 82,
+    "nonBillable": 33
+   },
+   {
+    "name": "Designer A",
+    "role": "Design",
+    "billable": 67,
+    "scheduled": 75,
+    "nonBillable": 8
+   }
+  ],
+  "weeks": [
+   "W31",
+   "W32",
+   "W33",
+   "W34",
+   "W35",
+   "W36",
+   "W37",
+   "W38",
+   "W39",
+   "W40",
+   "W41",
+   "W42"
+  ],
+  "teamBillable": [
+   71,
+   69,
+   66,
+   63,
+   68,
+   70,
+   72,
+   67,
+   64,
+   66,
+   69,
+   68
+  ],
+  "target": 75
+ }
+};
+/* DUMMY data for V2: Float people with departments and role targets, and Zendesk tickets.
+   Nothing here is real. It shows the layout until Float and Zendesk are connected.
+   Role targets are placeholders until Beth supplies her formula. */
+(function () {
+  var D = window.DH_DATA;
+
+  D.roleTargets = [
+    { role: 'Developer', target: 80 },
+    { role: 'Tech lead', target: 65 },
+    { role: 'QA', target: 75 },
+    { role: 'Designer', target: 70 },
+    { role: 'Project manager', target: 50 }
+  ];
+
+  /* available = hours in the last four weeks after time off; billable = billable logged hours */
+  D.float.people = [
+    { name: 'Developer A', role: 'Developer', dept: 'Development', available: 150, billable: 128, nonBillable: 14, scheduledNext: 92 },
+    { name: 'Developer B', role: 'Developer', dept: 'Development', available: 150, billable: 116, nonBillable: 22, scheduledNext: 88 },
+    { name: 'Developer C', role: 'Developer', dept: 'Development', available: 120, billable: 74, nonBillable: 30, scheduledNext: 70 },
+    { name: 'Developer D', role: 'Developer', dept: 'Development', available: 150, billable: 132, nonBillable: 10, scheduledNext: 100 },
+    { name: 'Tech lead A', role: 'Tech lead', dept: 'Development', available: 150, billable: 90, nonBillable: 45, scheduledNext: 85 },
+    { name: 'Tech lead B', role: 'Tech lead', dept: 'Development', available: 112, billable: 70, nonBillable: 30, scheduledNext: 90 },
+    { name: 'QA A', role: 'QA', dept: 'QA', available: 150, billable: 106, nonBillable: 24, scheduledNext: 94 },
+    { name: 'Designer A', role: 'Designer', dept: 'Design', available: 150, billable: 98, nonBillable: 36, scheduledNext: 75 },
+    { name: 'PM A', role: 'Project manager', dept: 'Delivery', available: 150, billable: 72, nonBillable: 60, scheduledNext: 80 },
+    { name: 'PM B', role: 'Project manager', dept: 'Delivery', available: 150, billable: 66, nonBillable: 70, scheduledNext: 82 }
+  ];
+  /* team billable vs blended target, last 12 weeks */
+  D.float.teamVsTarget = [97, 95, 92, 88, 93, 96, 99, 94, 90, 92, 96, 95];
+
+  D.zendesk = {
+    dummy: true,
+    open: [
+      { client: 'Client A', urgent: 0, high: 2, normal: 5, low: 1, oldestDays: 19 },
+      { client: 'Client B', urgent: 1, high: 1, normal: 4, low: 2, oldestDays: 33 },
+      { client: 'Client K', urgent: 0, high: 1, normal: 3, low: 0, oldestDays: 8 },
+      { client: 'Client G', urgent: 0, high: 3, normal: 6, low: 2, oldestDays: 41 },
+      { client: 'Client I', urgent: 0, high: 0, normal: 3, low: 1, oldestDays: 12 },
+      { client: 'Client J', urgent: 0, high: 1, normal: 2, low: 0, oldestDays: 6 },
+      { client: 'Client E', urgent: 0, high: 0, normal: 2, low: 1, oldestDays: 15 },
+      { client: 'Client D', urgent: 0, high: 0, normal: 1, low: 1, oldestDays: 4 },
+      { client: 'Client H', urgent: 0, high: 0, normal: 1, low: 0, oldestDays: 3 },
+      { client: 'Client L', urgent: 0, high: 0, normal: 1, low: 0, oldestDays: 2 },
+      { client: 'Client F', urgent: 0, high: 0, normal: 0, low: 1, oldestDays: 9 }
+    ],
+    /* last 30 days, business hours */
+    firstReplyHours: 2.6,
+    resolutionHours: 31,
+    weeks: ['W31', 'W32', 'W33', 'W34', 'W35', 'W36', 'W37', 'W38', 'W39', 'W40', 'W41', 'W42'],
+    created: [21, 18, 25, 19, 22, 30, 24, 20, 27, 23, 26, 22],
+    solved: [20, 19, 22, 21, 20, 26, 25, 21, 24, 22, 25, 23],
+    quarterTickets: { 'Client K': 9, 'Client D': 4, 'Client J': 11, 'Client F': 3, 'Client L': 2, 'Client E': 7, 'Client H': 3, 'Client I': 14, 'Client A': 18, 'Client B': 16, 'Client G': 29 }
+  };
+})();
+/* ==========================================================================
+   wireframe.js — shared interaction behaviour for lo-fi wireframes.
+
+   Everything here is driven by data attributes and classes, so pages stay
+   declarative and no page needs its own inline script. Keep it that way: a
+   wireframe pack with five slightly different accordion implementations is
+   how nav bugs get reported in a client review.
+
+   All patterns are keyboard-operable and dismissible with Escape, because
+   accessibility is cheaper to design in at wireframe stage than to retrofit.
+   ========================================================================== */
+
+(function () {
+  'use strict';
+
+  /* --- Navigation flyouts ------------------------------------------------
+     Opened on hover AND focus. Hover alone would make the whole navigation
+     unusable by keyboard, which is the single most common wireframe defect
+     that survives into build. */
+  function initNav() {
+    var backdrop = document.querySelector('.flyout-backdrop');
+    var items = document.querySelectorAll('.nav-item');
+
+    function closeAll() {
+      document.querySelectorAll('.nav-item.open').forEach(function (i) {
+        i.classList.remove('open');
+      });
+      if (backdrop) backdrop.classList.remove('active');
+    }
+
+    items.forEach(function (item) {
+      var flyout = item.querySelector('.nav-flyout');
+      if (!flyout) return;
+
+      var trigger = item.querySelector('.nav-link');
+      if (trigger) {
+        trigger.setAttribute('aria-expanded', 'false');
+        trigger.setAttribute('aria-haspopup', 'true');
+      }
+
+      function open() {
+        closeAll();
+        item.classList.add('open');
+        if (trigger) trigger.setAttribute('aria-expanded', 'true');
+        if (backdrop) backdrop.classList.add('active');
+      }
+
+      function close() {
+        item.classList.remove('open');
+        if (trigger) trigger.setAttribute('aria-expanded', 'false');
+        if (backdrop) backdrop.classList.remove('active');
+      }
+
+      item.addEventListener('mouseenter', open);
+      item.addEventListener('mouseleave', close);
+      item.addEventListener('focusin', open);
+      item.addEventListener('focusout', function () {
+        window.setTimeout(function () {
+          if (!item.contains(document.activeElement)) close();
+        }, 10);
+      });
+
+      if (trigger) {
+        trigger.addEventListener('click', function (ev) {
+          if (trigger.getAttribute('href') === '#') {
+            ev.preventDefault();
+            item.classList.contains('open') ? close() : open();
+          }
+        });
+      }
+    });
+
+    if (backdrop) backdrop.addEventListener('click', closeAll);
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeAll();
+    });
+  }
+
+  /* --- Accordions --------------------------------------------------------
+     Markup: <div class="accordion-item"><button class="accordion-title">…
+     Multiple panels may be open at once unless the .accordion carries
+     data-single. */
+  function initAccordions() {
+    document.querySelectorAll('.accordion-title').forEach(function (title) {
+      title.setAttribute('aria-expanded', 'false');
+      title.addEventListener('click', function () {
+        var item = title.closest('.accordion-item');
+        var group = title.closest('.accordion');
+        var willOpen = !item.classList.contains('open');
+
+        if (group && group.hasAttribute('data-single')) {
+          group.querySelectorAll('.accordion-item.open').forEach(function (o) {
+            o.classList.remove('open');
+            var t = o.querySelector('.accordion-title');
+            if (t) t.setAttribute('aria-expanded', 'false');
+          });
+        }
+
+        item.classList.toggle('open', willOpen);
+        title.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      });
+    });
+  }
+
+  /* --- Tabs --------------------------------------------------------------
+     Markup: <button class="tab" data-tab="panel-id"> and
+             <div class="tab-panel" id="panel-id"> */
+  function initTabs() {
+    document.querySelectorAll('.tabs').forEach(function (group) {
+      var tabs = group.querySelectorAll('.tab');
+      tabs.forEach(function (tab) {
+        tab.setAttribute('role', 'tab');
+        tab.addEventListener('click', function () {
+          tabs.forEach(function (t) {
+            t.classList.remove('active');
+            t.setAttribute('aria-selected', 'false');
+          });
+          tab.classList.add('active');
+          tab.setAttribute('aria-selected', 'true');
+
+          var target = document.getElementById(tab.getAttribute('data-tab'));
+          if (!target) return;
+          var container = target.parentElement;
+          container.querySelectorAll('.tab-panel').forEach(function (p) {
+            p.classList.remove('active');
+          });
+          target.classList.add('active');
+        });
+      });
+    });
+  }
+
+  /* --- Carousels ---------------------------------------------------------
+     Markup: <div class="carousel" data-autoplay="6000"> containing
+             .carousel-track > .carousel-item, .carousel-arrow[data-dir],
+             and an empty .carousel-indicators which is populated here. */
+  function initCarousels() {
+    document.querySelectorAll('.carousel').forEach(function (carousel) {
+      var track = carousel.querySelector('.carousel-track');
+      if (!track) return;
+      var items = track.querySelectorAll('.carousel-item');
+      var dotsHost = carousel.querySelector('.carousel-indicators');
+      var index = 0;
+      var timer = null;
+
+      function render() {
+        track.style.transform = 'translateX(-' + index * 100 + '%)';
+        if (!dotsHost) return;
+        dotsHost.querySelectorAll('.carousel-dot').forEach(function (d, i) {
+          d.classList.toggle('active', i === index);
+          d.setAttribute('aria-current', i === index ? 'true' : 'false');
+        });
+      }
+
+      function go(n) {
+        index = (n + items.length) % items.length;
+        render();
+      }
+
+      if (dotsHost) {
+        items.forEach(function (_, i) {
+          var dot = document.createElement('button');
+          dot.className = 'carousel-dot';
+          dot.type = 'button';
+          dot.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+          dot.addEventListener('click', function () { go(i); });
+          dotsHost.appendChild(dot);
+        });
+      }
+
+      carousel.querySelectorAll('.carousel-arrow').forEach(function (arrow) {
+        arrow.addEventListener('click', function () {
+          go(index + (arrow.getAttribute('data-dir') === 'prev' ? -1 : 1));
+        });
+      });
+
+      var interval = parseInt(carousel.getAttribute('data-autoplay'), 10);
+      if (interval > 0) {
+        var start = function () { timer = window.setInterval(function () { go(index + 1); }, interval); };
+        var stop = function () { window.clearInterval(timer); };
+        start();
+        carousel.addEventListener('mouseenter', stop);
+        carousel.addEventListener('focusin', stop);
+        carousel.addEventListener('mouseleave', start);
+      }
+
+      render();
+    });
+  }
+
+  /* --- Modals ------------------------------------------------------------
+     Markup: any element with data-modal-open="modal-id", and
+             <div class="wf-modal" id="modal-id"> */
+  function initModals() {
+    function close(modal) {
+      modal.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    document.querySelectorAll('[data-modal-open]').forEach(function (trigger) {
+      trigger.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        var modal = document.getElementById(trigger.getAttribute('data-modal-open'));
+        if (!modal) return;
+        modal.classList.add('open');
+        document.body.style.overflow = 'hidden';
+        var panel = modal.querySelector('.wf-modal-panel');
+        if (panel) {
+          panel.setAttribute('tabindex', '-1');
+          panel.focus();
+        }
+      });
+    });
+
+    document.querySelectorAll('.wf-modal').forEach(function (modal) {
+      modal.addEventListener('click', function (ev) {
+        if (ev.target === modal || ev.target.classList.contains('wf-modal-close')) close(modal);
+      });
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      document.querySelectorAll('.wf-modal.open').forEach(close);
+    });
+  }
+
+  /* --- Annotation toggle -------------------------------------------------
+     Injects the floating control only when the page actually has notes, and
+     remembers the choice for the session so a reviewer clicking through ten
+     pages does not have to hide notes ten times. */
+  function initNotes() {
+    if (!document.querySelector('.wf-note')) return;
+
+    var hidden = false;
+    try { hidden = window.sessionStorage.getItem('wf-notes-hidden') === '1'; } catch (e) { /* private mode */ }
+
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'wf-notes-toggle';
+
+    function apply() {
+      document.body.classList.toggle('wf-notes-hidden', hidden);
+      button.textContent = hidden ? 'Show annotations' : 'Hide annotations';
+      button.setAttribute('aria-pressed', hidden ? 'true' : 'false');
+    }
+
+    button.addEventListener('click', function () {
+      hidden = !hidden;
+      try { window.sessionStorage.setItem('wf-notes-hidden', hidden ? '1' : '0'); } catch (e) { /* private mode */ }
+      apply();
+    });
+
+    document.body.appendChild(button);
+    apply();
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    initNav();
+    initAccordions();
+    initTabs();
+    initCarousels();
+    initModals();
+    initNotes();
+  });
+})();
+/* ==========================================================================
+   dashboard.js — renders the Delivery Hub wireframe (V2) from window.DH_DATA.
+   Hand-written; vanilla JS; no dependencies. Shared by every view.
+   V2: at risk = any overrun > 0%; portfolio overrun; utilisation vs role
+   targets; Zendesk support view; pipeline by AM; plain PM filter.
+   ========================================================================== */
+(function () {
+  'use strict';
+
+  var D = window.DH_DATA;
+  var AS_OF = new Date('2026-10-27T00:00:00');
+  var PORTFOLIO_TARGET = 0.10;
+  var state = { pm: 'all' };
+
+  /* ---------- helpers ---------------------------------------------------- */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function gbp(n) {
+    if (n == null || isNaN(n)) return '–';
+    var neg = n < 0; n = Math.abs(n);
+    var s = n >= 100000 ? '£' + Math.round(n / 1000) + 'k'
+      : n >= 10000 ? '£' + (n / 1000).toFixed(1) + 'k'
+      : '£' + Math.round(n).toLocaleString('en-GB');
+    return neg ? '−' + s : s;
+  }
+  function gbpFull(n) { return n == null ? '–' : (n < 0 ? '−' : '') + '£' + Math.round(Math.abs(n)).toLocaleString('en-GB'); }
+  function pct(x, dp) { return x == null ? '–' : (x * 100).toFixed(dp || 0) + '%'; }
+  function signedPct(x, dp) { return x == null ? '–' : (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x * 100).toFixed(dp || 0) + '%'; }
+  function dayDiff(iso) { return Math.round((AS_OF - new Date(iso + 'T00:00:00')) / 864e5); }
+  function fmtDate(iso) {
+    if (!iso) return '–';
+    var d = new Date(iso + 'T00:00:00');
+    return d.getDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()] + ' ' + d.getFullYear();
+  }
+  function status(label, kind) { return '<span class="status s-' + kind + '">' + esc(label) + '</span>'; }
+  function typeTag(t) { return t ? '<span class="type-tag">' + esc(t) + '</span>' : ''; }
+  function $(id) { return document.getElementById(id); }
+  function sum(arr, f) { return arr.reduce(function (a, x) { return a + (f(x) || 0); }, 0); }
+  function uniq(arr) { return arr.filter(function (x, i) { return x && arr.indexOf(x) === i; }); }
+
+  /* Client names differ across sources. In the build this is the Clients list. */
+  var ALIAS = {
+    'Client D Group': 'Client D', 'Client D Ltd': 'Client D', 'Client F Group': 'Client F', 'Client F Ltd': 'Client F',
+    'Client E Group': 'Client E', 'Client H Group': 'Client H', 'Client G Group': 'Client G',
+    'Client B (formerly former brand)': 'Client B', 'former brand': 'Client B', 'Client S Group': 'Client S', 'Client T Group': 'Client T'
+  };
+  function client(name) { var n = String(name || '').trim(); return ALIAS[n] || n; }
+
+  /* Confirmed by Beth: BM = Beth, MS = Marc. */
+  var OWNER = { BM: 'Beth', MS: 'Marc' };
+
+  /* Project type: a Float tag in the build; inferred from the name here. */
+  function projectType(name) {
+    var n = name.toLowerCase();
+    if (/v17|upgrade/.test(n)) return 'Umbraco upgrade';
+    if (/rebuild/.test(n)) return 'Rebuild';
+    if (/sharepoint|knowledge share/.test(n)) return 'SharePoint';
+    if (/migration|integration|environment|azure|disaster|policy platform|dms/.test(n)) return 'Integration';
+    if (/campaign/.test(n)) return 'Campaign';
+    if (/performance/.test(n)) return 'Performance';
+    return 'Enhancement';
+  }
+  var LESSON_TYPE = { 'Client L Umbraco v13 to v17 upgrade': 'Umbraco upgrade', 'Client E payment gateway': 'Integration', 'Client G Umbraco Cloud rebuild': 'Rebuild' };
+
+  D.projects.forEach(function (p) {
+    p.client = client(p.client); p.pm = OWNER[p.owner] || p.owner; p.type = projectType(p.project);
+    p.forecastUB = p.budget * (1 + p.overrunUB);
+  });
+  D.history.forEach(function (h) { h.client = client(h.client); });
+  D.payments.forEach(function (p) { p.client = client(p.client); });
+  D.lessons.forEach(function (l) { l.type = LESSON_TYPE[l.project]; });
+  var health = {};
+  Object.keys(D.health).forEach(function (k) { health[client(k)] = D.health[k]; });
+  var targetOf = {};
+  D.roleTargets.forEach(function (r) { targetOf[r.role] = r.target / 100; });
+
+  /* ---------- status rules: at risk = any overrun above 0% ---------------- */
+  function projectStatus(p) {
+    return p.overrun > 0 ? ['At risk', 'bad'] : ['On track', 'ok'];
+  }
+  function contractStatus(c) {
+    if (c.pctUsed > 1) return ['Over budget', 'bad'];
+    if (c.pctUsed > c.pctElapsed) return ['At risk', 'bad'];
+    return ['On track', 'ok'];
+  }
+  function endState(c) {
+    if (!c.contractEnd) return null;
+    var d = dayDiff(c.contractEnd);
+    if (d > 0) return ['End date passed', 'warn'];
+    if (d > -60) return ['Ends in ' + (-d) + ' days', 'warn'];
+    return null;
+  }
+
+  /* ---------- scope (PM filter) ------------------------------------------ */
+  function pmClients(pm) {
+    var set = {};
+    D.contracts.forEach(function (c) { if (c.pm === pm) set[c.client] = 1; });
+    D.projects.forEach(function (p) { if (p.pm === pm) set[p.client] = 1; });
+    return set;
+  }
+  function scoped() {
+    if (state.pm === 'all') return { projects: D.projects, contracts: D.contracts, payments: D.payments };
+    var cl = pmClients(state.pm);
+    return {
+      projects: D.projects.filter(function (p) { return p.pm === state.pm; }),
+      contracts: D.contracts.filter(function (c) { return c.pm === state.pm; }),
+      payments: D.payments.filter(function (p) { return cl[p.client]; })
+    };
+  }
+
+  /* ---------- derived figures -------------------------------------------- */
+  function portfolio(projects) {
+    var bd = sum(projects, function (p) { return p.budget; });
+    var fcUB = sum(projects, function (p) { return p.forecastUB; });
+    var fc = sum(projects, function (p) { return p.forecast; });
+    var over = projects.filter(function (p) { return p.forecastUB > p.budget; });
+    var under = projects.filter(function (p) { return p.forecastUB <= p.budget; });
+    return {
+      budget: bd, forecastUB: fcUB, forecast: fc,
+      overrun: bd ? fcUB / bd - 1 : 0, overrunBillable: bd ? fc / bd - 1 : 0,
+      overCount: over.length, overAmount: sum(over, function (p) { return p.forecastUB - p.budget; }),
+      underCount: under.length, underAmount: sum(under, function (p) { return p.budget - p.forecastUB; })
+    };
+  }
+  function utilisation(people) {
+    var avail = sum(people, function (p) { return p.available; });
+    var bill = sum(people, function (p) { return p.billable; });
+    var targetHrs = sum(people, function (p) { return p.available * (targetOf[p.role] || 0); });
+    return { util: avail ? bill / avail : 0, vsTarget: targetHrs ? bill / targetHrs : 0, blendedTarget: avail ? targetHrs / avail : 0 };
+  }
+  function depts() { return uniq(D.float.people.map(function (p) { return p.dept; })); }
+  function q4Total(pay) { return sum(pay, function (p) { return p.amount; }); }
+  function openTotal(o) { return o.urgent + o.high + o.normal + o.low; }
+
+  /* ---------- shared renderers (modules) ------------------------------- */
+  function kpi(label, value, sub, href, dummy) {
+    var tag = href ? 'a' : 'div';
+    return '<' + tag + ' class="kpi' + (dummy ? ' dummy' : '') + '"' + (href ? ' href="' + href + '"' : '') + '>' +
+      '<span class="kpi-label">' + esc(label) + '</span><span class="kpi-value">' + esc(value) + '</span>' +
+      (sub ? '<span class="kpi-sub">' + esc(sub) + '</span>' : '') + '</' + tag + '>';
+  }
+  function burn(used, elapsed) {
+    var w = Math.min(used, 1) * 100;
+    return '<div class="burn" role="img" aria-label="' + pct(used) + ' used, ' + pct(elapsed) + ' of cycle elapsed">' +
+      '<div class="burn-fill' + (used > elapsed ? ' over' : '') + '" style="width:' + w + '%"></div>' +
+      '<div class="burn-tick" style="left:calc(' + (elapsed * 100) + '% - 1px)"></div></div>';
+  }
+  function freshness(items) {
+    return items.map(function (i) { return '<span>' + esc(i[0]) + ': <b>' + esc(i[1]) + '</b></span>'; }).join('');
+  }
+  function sourceList(arr) { return '<p class="ai-sources">Sources: ' + arr.map(esc).join(' · ') + '</p>'; }
+  function lessonCard(l) {
+    return '<article class="lesson"><div class="lesson-meta">' + status(l.cat, 'ok') + typeTag(l.type) + '<span>' + esc(l.project) + '</span><span>Owner ' + esc(l.owner) + '</span></div>' +
+      '<dl><dt>Issue</dt><dd>' + esc(l.issue) + '</dd><dt>Impact</dt><dd>' + esc(l.impact) + '</dd><dt>Action</dt><dd>' + esc(l.action) + '</dd></dl></article>';
+  }
+
+  /* Sortable table. cols: [{key,label,num,render,sort,nosort}] */
+  function table(el, cols, rows, opts) {
+    opts = opts || {};
+    var sortKey = opts.sortKey, dir = opts.dir || -1;
+    function draw() {
+      var data = rows.slice();
+      if (sortKey) {
+        var col = cols.filter(function (c) { return c.key === sortKey; })[0];
+        var get = col.sort || function (r) { return r[col.key]; };
+        data.sort(function (a, b) { var x = get(a), y = get(b); return (x > y ? 1 : x < y ? -1 : 0) * dir; });
+      }
+      var h = '<thead><tr>' + cols.map(function (c) {
+        var arrow = c.key === sortKey ? (dir > 0 ? ' ▲' : ' ▼') : '';
+        var ariaSort = c.key === sortKey ? (dir > 0 ? 'ascending' : 'descending') : 'none';
+        return '<th scope="col" class="' + (c.num ? 'num' : '') + '" aria-sort="' + ariaSort + '">' +
+          (c.nosort ? esc(c.label) : '<button type="button" data-k="' + c.key + '">' + esc(c.label) + arrow + '</button>') + '</th>';
+      }).join('') + '</tr></thead><tbody>';
+      h += data.length ? data.map(function (r) {
+        return '<tr>' + cols.map(function (c) {
+          return '<td class="' + (c.num ? 'num' : '') + '">' + (c.render ? c.render(r) : esc(r[c.key])) + '</td>';
+        }).join('') + '</tr>';
+      }).join('') : '<tr><td colspan="' + cols.length + '" class="muted">Nothing to show for this selection.</td></tr>';
+      h += '</tbody>' + (opts.foot ? '<tfoot><tr>' + opts.foot(data) + '</tr></tfoot>' : '');
+      el.innerHTML = h;
+      el.querySelectorAll('th button').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var k = b.getAttribute('data-k');
+          dir = k === sortKey ? -dir : -1; sortKey = k; draw();
+          var again = el.querySelector('th button[data-k="' + k + '"]'); if (again) again.focus();
+        });
+      });
+    }
+    draw();
+  }
+
+  var projectCols = [
+    { key: 'project', label: 'Project', render: function (p) { return '<a href="#projects" data-project="' + esc(p.project) + '">' + esc(p.project) + '</a><br><span class="small muted">' + esc(p.client) + '</span> ' + typeTag(p.type); } },
+    { key: 'owner', label: 'PM' },
+    { key: 'budget', label: 'Budget', num: true, render: function (p) { return gbp(p.budget); } },
+    { key: 'forecastUB', label: 'Forecast incl. UB', num: true, render: function (p) { return gbp(p.forecastUB); } },
+    { key: 'overrunUB', label: 'Var. incl. UB', num: true, render: function (p) { return signedPct(p.overrunUB); } },
+    { key: 'status', label: 'Status', sort: function (p) { return p.overrun; }, render: function (p) { var s = projectStatus(p); return status(s[0], s[1]); } },
+    { key: 'due', label: 'Due (original)', render: function (p) { return fmtDate(p.due) + (dayDiff(p.due) > 0 ? '<br><span class="small muted">passed</span>' : ''); } }
+  ];
+
+  function contractCols(withClient) {
+    var c = [{ key: 'name', label: 'Contract', render: function (c) { return esc(c.name) + '<br><span class="small muted">PM ' + esc(c.pm) + ' · AM ' + esc(c.am) + '</span>'; } }];
+    if (withClient) c.push({ key: 'client', label: 'Client' });
+    return c.concat([
+      { key: 'budget', label: 'Budget', num: true, render: function (c) { return gbp(c.budget + (c.adj || 0)); } },
+      { key: 'used', label: 'Used', num: true, render: function (c) { return gbp(c.used); } },
+      { key: 'pctUsed', label: 'Used vs time', render: function (c) { return burn(c.pctUsed, c.pctElapsed) + '<div class="burn-legend">' + pct(c.pctUsed) + ' used · ' + pct(c.pctElapsed) + ' of cycle</div>'; } },
+      { key: 'status', label: 'Status', sort: function (c) { return c.pctUsed - c.pctElapsed; }, render: function (c) { var s = contractStatus(c); return status(s[0], s[1]); } },
+      { key: 'remainingDays', label: 'Days left', num: true, render: function (c) { return c.remainingDays.toFixed(1); } },
+      { key: 'contractEnd', label: 'Contract end', render: function (c) { var e = endState(c); return fmtDate(c.contractEnd) + (e ? '<br>' + status(e[0], e[1]) : ''); } },
+      { key: 'carry', label: 'Carry-over', nosort: true, render: function (c) { return esc(c.carry || '–') + (c.notes ? '<br><span class="small muted">' + esc(c.notes) + '</span>' : ''); } }
+    ]);
+  }
+
+  function vbars(items, opts) {
+    opts = opts || {};
+    var max = opts.max || Math.max.apply(null, items.map(function (i) { return i.v; }));
+    var h = '<div class="vbars">';
+    if (opts.target != null) h += '<div class="vtarget" style="bottom:' + (opts.target / max * 100) + '%"><span>' + esc(opts.targetLabel) + '</span></div>';
+    h += items.map(function (i) {
+      return '<div class="vbar"><span>' + esc(i.label) + '</span><div class="vbar-fill' + (i.hi ? ' hi' : '') + '" style="height:' + (i.v / max * 100) + '%"></div></div>';
+    }).join('') + '</div><div class="vbar-labels">' + items.map(function (i) { return '<span>' + esc(i.x) + '</span>'; }).join('') + '</div>';
+    return h;
+  }
+  function hbars(items, max) {
+    return '<div class="bars">' + items.map(function (i) {
+      return '<div class="bar-row"><span>' + esc(i.label) + '</span><div class="bar-track"><div class="bar-fill' + (i.hi ? ' hi' : '') + '" style="width:' + Math.min(i.v / max * 100, 100) + '%"></div>' +
+        (i.target != null ? '<div class="bar-target" style="left:' + (i.target / max * 100) + '%"></div>' : '') + '</div><span class="bar-val">' + esc(i.text) + '</span></div>';
+    }).join('') + '</div>';
+  }
+
+  /* ---------- attention list & summary ---------------------------------- */
+  function attentionItems(s) {
+    var out = [];
+    s.projects.filter(function (p) { return p.overrun > 0; }).sort(function (a, b) { return b.overrunUB - a.overrunUB; }).forEach(function (p) {
+      out.push({ s: status('At risk', 'bad'), t: p.client + ': ' + p.project, why: 'Forecast ' + gbp(p.forecastUB) + ' incl. unbillable against ' + gbp(p.budget) + ' budget (' + signedPct(p.overrunUB) + ')', href: '#projects', data: p.project });
+    });
+    s.contracts.filter(function (c) { return contractStatus(c)[1] !== 'ok'; }).forEach(function (c) {
+      var st = contractStatus(c);
+      out.push({ s: status(st[0], st[1]), t: c.name, why: pct(c.pctUsed) + ' of budget used with ' + pct(c.pctElapsed) + ' of the cycle gone', href: '#contracts' });
+    });
+    var soon = s.contracts.filter(function (c) { var e = endState(c); return e && dayDiff(c.contractEnd) <= 0; });
+    soon.forEach(function (c) { out.push({ s: status('Renewal', 'warn'), t: c.name, why: 'Contract ends ' + fmtDate(c.contractEnd), href: '#contracts' }); });
+    var passed = s.contracts.filter(function (c) { return c.contractEnd && dayDiff(c.contractEnd) > 0; });
+    if (passed.length) out.push({ s: status('Dates', 'warn'), t: passed.length + ' contract end dates have passed', why: 'Being updated by Marc (clean-up Step 3)', href: '#contracts' });
+    s.projects.filter(function (p) { return dayDiff(p.updated) > 30; }).forEach(function (p) {
+      out.push({ s: status('Stale', 'warn'), t: p.client + ': ' + p.project, why: 'Not updated for ' + dayDiff(p.updated) + ' days. Float will keep this current once it replaces the Cost Tracker', href: '#projects', data: p.project });
+    });
+    return out;
+  }
+
+  function teamLine() {
+    var u = utilisation(D.float.people);
+    return 'Team utilisation was ' + pct(u.util) + ' against a blended target of ' + pct(u.blendedTarget) + ' (' + pct(u.vsTarget) + ' of target, dummy Float data).';
+  }
+  function summaryText(s) {
+    var pf = portfolio(s.projects);
+    var risk = s.projects.filter(function (p) { return p.overrun > 0; }).sort(function (a, b) { return b.overrunUB - a.overrunUB; });
+    var cRisk = s.contracts.filter(function (c) { return contractStatus(c)[1] !== 'ok'; });
+    return '<ul>' +
+      '<li><b>Portfolio:</b> ' + signedPct(pf.overrun, 1) + ' over budget across ' + s.projects.length + ' active projects, ' + (pf.overrun < PORTFOLIO_TARGET ? 'inside' : 'outside') + ' the 10% target. ' + pf.overCount + ' projects are ' + gbp(pf.overAmount) + ' over between them, offset by ' + gbp(pf.underAmount) + ' under on the rest.</li>' +
+      '<li><b>Utilisation:</b> ' + teamLine() + '</li>' +
+      '<li><b>At risk:</b> ' + risk.length + ' projects' + (risk.length ? ', led by ' + esc(risk[0].client + ' ' + risk[0].project) + ' at ' + signedPct(risk[0].overrunUB) : '') + '; ' + cRisk.length + ' SLA or retainer cycles using budget faster than time.</li>' +
+      '</ul>';
+  }
+
+  /* ---------- views -------------------------------------------------------- */
+  function renderOverview() {
+    var s = scoped();
+    $('ov-scope').textContent = state.pm === 'all' ? 'All PMs' : state.pm + '’s projects and contracts';
+    $('fresh-overview').innerHTML = freshness([['Data as of', fmtDate('2026-10-27')], ['Timesheets', 'complete Monday morning'], ['Projects', 'Cost Tracker, edited 13 Oct (Float in build)'], ['Contracts', 'Q4 SMT tracker'], ['Float people, Zendesk', 'dummy']]);
+
+    var pf = portfolio(s.projects);
+    var risk = s.projects.filter(function (p) { return p.overrun > 0; }).sort(function (a, b) { return b.overrunUB - a.overrunUB; });
+    var u = utilisation(D.float.people);
+    var deptRows = depts().map(function (d) { var x = utilisation(D.float.people.filter(function (p) { return p.dept === d; })); return { label: d, v: x.vsTarget * 100, text: pct(x.vsTarget), target: 100, hi: x.vsTarget < 0.9 }; });
+
+    $('ov-measures').innerHTML =
+      '<a class="measure" href="#projects"><span class="measure-label">Portfolio overrun</span><span class="measure-value">' + signedPct(pf.overrun, 1) + '</span>' +
+      '<span class="measure-target">' + status(pf.overrun < PORTFOLIO_TARGET ? 'Inside target' : 'Outside target', pf.overrun < PORTFOLIO_TARGET ? 'ok' : 'bad') + ' Target &lt; 10%</span>' +
+      '<div class="measure-rows"><div><span>Forecast incl. unbillable</span><span>' + gbp(pf.forecastUB) + '</span></div><div><span>Budget</span><span>' + gbp(pf.budget) + '</span></div>' +
+      '<div><span>' + pf.overCount + ' projects over</span><span>+' + gbp(pf.overAmount) + '</span></div><div><span>' + pf.underCount + ' projects under</span><span>−' + gbp(pf.underAmount) + '</span></div>' +
+      '<div><span>Billable only</span><span>' + signedPct(pf.overrunBillable, 1) + '</span></div></div></a>' +
+
+      '<a class="measure dummy" href="#people"><span class="measure-label">Team utilisation vs target</span><span class="measure-value">' + pct(u.vsTarget) + '</span>' +
+      '<span class="measure-target">' + pct(u.util) + ' billable against a blended ' + pct(u.blendedTarget) + ' target · dummy</span>' + hbars(deptRows, 120) + '</a>' +
+
+      '<a class="measure" href="#projects"><span class="measure-label">At-risk projects</span><span class="measure-value">' + risk.length + ' <span class="kpi-sub">of ' + s.projects.length + '</span></span>' +
+      '<span class="measure-target">Any forecast above budget</span><div class="measure-rows">' +
+      risk.slice(0, 6).map(function (p) { return '<div><span>' + esc(p.client + ': ' + p.project) + '</span><span>' + signedPct(p.overrunUB) + '</span></div>'; }).join('') + '</div></a>';
+
+    var cRisk = s.contracts.filter(function (c) { return contractStatus(c)[1] !== 'ok'; }).length;
+    var ending = s.contracts.filter(function (c) { return c.contractEnd && dayDiff(c.contractEnd) > -60; }).length;
+    var openT = sum(D.zendesk.open, openTotal);
+    $('ov-kpis').innerHTML =
+      kpi('Contracts at risk', cRisk + ' of ' + s.contracts.length, 'Budget used ahead of time', '#contracts') +
+      kpi('Contracts ending or ended', ending, 'Within 60 days or date passed', '#contracts') +
+      kpi('Invoices due Oct–Dec', gbp(q4Total(s.payments)), 'Payment Schedule', '#pipeline') +
+      kpi('Open support tickets', openT, 'Zendesk · dummy', '#support', true);
+
+    $('ov-attention').innerHTML = attentionItems(s).map(function (a) {
+      return '<li>' + a.s + '<span><a href="' + a.href + '"' + (a.data ? ' data-project="' + esc(a.data) + '"' : '') + '>' + esc(a.t) + '</a><span class="why">' + esc(a.why) + '</span></span></li>';
+    }).join('') || '<li><span></span><span class="muted">Nothing at risk for this selection.</span></li>';
+
+    table($('ov-projects'), projectCols, s.projects, { sortKey: 'overrunUB', dir: -1 });
+
+    $('ov-summary').innerHTML = '<h3><span class="ai-tag">AI draft</span> Week of 26 Oct 2026</h3>' + summaryText(s) +
+      sourceList(['Cost Tracker (' + s.projects.length + ' rows)', 'SMT Budget Tracker Q4', 'Float (dummy)']);
+
+    $('ov-trend').innerHTML = vbars(D.trend.map(function (t) {
+      return { x: t.yr + (t.yr === 2026 ? '*' : ''), v: t.over / t.n * 100, label: Math.round(t.over / t.n * 100) + '%', hi: t.over / t.n > 0.4 };
+    }), { max: 60 }) + '<p class="small muted">Projects forecast more than 10% over (the V1 rule), as recorded in the archive. *2026 includes active projects at forecast.</p>';
+  }
+
+  function renderProject() {
+    var sel = $('project-select'), s = scoped(), cur = sel.value;
+    sel.innerHTML = s.projects.map(function (p) { return '<option value="' + esc(p.project) + '">' + esc(p.client + ': ' + p.project) + '</option>'; }).join('');
+    if (!s.projects.length) { $('project-body').innerHTML = '<p class="muted">No active projects for this PM.</p>'; return; }
+    var names = s.projects.map(function (p) { return p.project; });
+    sel.value = names.indexOf(cur) >= 0 ? cur : names[0];
+    var p = s.projects.filter(function (x) { return x.project === sel.value; })[0];
+    var st = projectStatus(p);
+    var scheduled = Math.max(p.forecast - p.spend, 0);
+    var ub = p.forecastUB - p.forecast;
+    var max = Math.max(p.budget, p.forecastUB);
+    var h = '<p>' + status(st[0], st[1]) + ' ' + typeTag(p.type) + ' <span class="muted">' + esc(p.client) + ' · PM ' + esc(p.pm) + '</span></p>';
+    h += '<div class="kpis">' + kpi('Budget', gbpFull(p.budget), 'Float project budget') + kpi('Logged (billable)', gbpFull(p.spend), pct(p.spend / p.budget) + ' of budget') +
+      kpi('Scheduled (remaining)', gbpFull(scheduled), 'Future allocations') + kpi('Forecast', gbpFull(p.forecast), signedPct(p.overrun) + ' vs budget') +
+      kpi('Forecast incl. unbillable', gbpFull(p.forecastUB), signedPct(p.overrunUB) + ' vs budget') +
+      kpi('Original due', fmtDate(p.due), dayDiff(p.due) > 0 ? 'Passed ' + dayDiff(p.due) + ' days ago' : 'In ' + (-dayDiff(p.due)) + ' days') + '</div>';
+    h += '<div class="cols"><section><h2 class="section-title">Running cost</h2>' + hbars([
+      { label: 'Budget', v: p.budget, text: gbp(p.budget) },
+      { label: 'Logged', v: p.spend, text: gbp(p.spend) },
+      { label: '+ Scheduled', v: p.forecast, text: gbp(p.forecast), hi: p.forecast > p.budget },
+      { label: '+ Unbillable', v: p.forecastUB, text: gbp(p.forecastUB), hi: p.forecastUB > p.budget }], max) +
+      '<p class="small muted">Each bar adds to the one above: logged, then scheduled work (= forecast), then unbillable time (' + gbp(ub) + ').</p>' +
+      '<div class="wf-placeholder" style="min-height:120px;margin-top:1rem">Burn-up line from monthly snapshots: logged + scheduled against budget</div>' +
+      '<h2 class="section-title" style="margin-top:2rem">Team this month</h2><div class="dummy-banner small">Dummy Float data</div><div class="table-wrap"><table class="dt"><thead><tr><th>Person</th><th>Role</th><th class="num">Scheduled (days)</th><th class="num">Logged (days)</th></tr></thead><tbody>' +
+      '<tr><td>PM A</td><td>Project manager</td><td class="num">2.0</td><td class="num">1.5</td></tr><tr><td>Tech lead A</td><td>Tech lead</td><td class="num">3.0</td><td class="num">3.5</td></tr><tr><td>Developer B</td><td>Developer</td><td class="num">8.0</td><td class="num">9.25</td></tr><tr><td>QA A</td><td>QA</td><td class="num">2.0</td><td class="num">1.0</td></tr></tbody></table></div></section>';
+    var sim = similar(p);
+    var ls = D.lessons.filter(function (l) { return l.type === p.type; });
+    if (!ls.length) ls = D.lessons.filter(function (l) { return l.cat === 'Estimation'; });
+    h += '<section><h2 class="section-title">Lessons for ' + esc(p.type.toLowerCase()) + ' projects</h2><div class="stack">' + ls.slice(0, 3).map(lessonCard).join('') + '</div>' +
+      (D.lessons.filter(function (l) { return l.type === p.type; }).length ? '' : '<p class="small muted">No lessons of this type yet, so general estimation lessons are shown.</p>') +
+      '<h2 class="section-title" style="margin-top:2rem">Similar past projects</h2>' + (sim.length ? '<div class="table-wrap"><table class="dt"><thead><tr><th>Project</th><th class="num">Year</th><th class="num">Var.</th></tr></thead><tbody>' +
+      sim.slice(0, 6).map(function (x) { return '<tr><td>' + esc(x.client + ': ' + x.project) + '</td><td class="num">' + x.yr + '</td><td class="num">' + signedPct(x.overrun) + '</td></tr>'; }).join('') + '</tbody></table></div><p class="small muted">' +
+      sim.filter(function (x) { return x.overrun > 0; }).length + ' of ' + sim.length + ' similar projects ran over budget.</p>' : '<p class="muted">No similar projects found.</p>') + '</section></div>';
+    $('project-body').innerHTML = h;
+  }
+  function similar(p) {
+    var t = p.type;
+    return D.history.filter(function (h) { return projectType(h.project) === t; }).sort(function (a, b) { return b.yr - a.yr; });
+  }
+
+  function renderContracts() {
+    var s = scoped();
+    $('fresh-contracts').innerHTML = freshness([['Source', '2026 Q4 SMT Budget Tracker (Contracts list + Float in build)'], ['Cycle position as of', fmtDate('2026-10-27')]]);
+    table($('ct-sla-table'), contractCols(true), s.contracts.filter(function (c) { return c.type === 'SLA'; }), { sortKey: 'status' });
+    table($('ct-ret-table'), contractCols(true), s.contracts.filter(function (c) { return c.type === 'Retainer'; }), { sortKey: 'status' });
+  }
+
+  function renderPeople() {
+    var dept = $('dept-select').value;
+    var ppl = D.float.people.filter(function (p) { return dept === 'all' || p.dept === dept; });
+    var u = utilisation(ppl);
+    $('pe-kpis').innerHTML = kpi('Against target', pct(u.vsTarget), 'Billable hours ÷ target hours', null, true) +
+      kpi('Utilisation', pct(u.util), 'Billable ÷ available', null, true) +
+      kpi('Blended target', pct(u.blendedTarget), 'From role targets', null, true) +
+      kpi('Below their target', ppl.filter(function (p) { return p.billable / p.available < (targetOf[p.role] || 0); }).length + ' of ' + ppl.length, 'People', null, true);
+    table($('pe-dept'), [
+      { key: 'dept', label: 'Department' }, { key: 'n', label: 'People', num: true },
+      { key: 'util', label: 'Utilisation', num: true, render: function (r) { return pct(r.util); } },
+      { key: 'target', label: 'Blended target', num: true, render: function (r) { return pct(r.target); } },
+      { key: 'vs', label: 'Against target', num: true, render: function (r) { return pct(r.vs) + (r.vs < 1 ? ' ' + status('Below', 'warn') : ''); } }
+    ], depts().map(function (d) { var x = utilisation(D.float.people.filter(function (p) { return p.dept === d; })); return { dept: d, n: D.float.people.filter(function (p) { return p.dept === d; }).length, util: x.util, target: x.blendedTarget, vs: x.vsTarget }; }), { sortKey: 'vs', dir: 1 });
+    table($('pe-table'), [
+      { key: 'name', label: 'Person' }, { key: 'role', label: 'Role' }, { key: 'dept', label: 'Department' },
+      { key: 'util', label: 'Utilisation', num: true, sort: function (p) { return p.billable / p.available; }, render: function (p) { return pct(p.billable / p.available); } },
+      { key: 'target', label: 'Target', num: true, sort: function (p) { return targetOf[p.role]; }, render: function (p) { return pct(targetOf[p.role]); } },
+      { key: 'vs', label: 'Against target', num: true, sort: function (p) { return p.billable / p.available / targetOf[p.role]; }, render: function (p) { var v = p.billable / p.available / targetOf[p.role]; return pct(v) + (v < 0.9 ? ' ' + status('Below', 'warn') : ''); } }
+    ], ppl, { sortKey: 'vs', dir: 1 });
+    $('pe-trend').innerHTML = vbars(D.float.weeks.map(function (w, i) { var v = D.float.teamVsTarget[i]; return { x: w, v: v, label: v + '%', hi: v < 90 }; }), { max: 110, target: 100, targetLabel: 'Target 100%' });
+    table($('pe-targets'), [{ key: 'role', label: 'Role' }, { key: 'target', label: 'Target', num: true, render: function (r) { return r.target + '%'; } }], D.roleTargets, { sortKey: 'target' });
+  }
+
+  function renderSupport() {
+    var z = D.zendesk, open = z.open;
+    var total = sum(open, openTotal), urgentHigh = sum(open, function (o) { return o.urgent + o.high; });
+    var oldest = open.slice().sort(function (a, b) { return b.oldestDays - a.oldestDays; })[0];
+    $('su-kpis').innerHTML = kpi('Open tickets', total, urgentHigh + ' urgent or high', null, true) +
+      kpi('Median first reply', z.firstReplyHours + ' hrs', 'Last 30 days, business hours', null, true) +
+      kpi('Median resolution', z.resolutionHours + ' hrs', 'Last 30 days, business hours', null, true) +
+      kpi('Oldest open', oldest.oldestDays + ' days', oldest.client, null, true);
+    table($('su-open'), [
+      { key: 'client', label: 'Client', render: function (o) { return '<a href="#clients" data-client="' + esc(o.client) + '">' + esc(o.client) + '</a>'; } },
+      { key: 'urgent', label: 'Urgent', num: true }, { key: 'high', label: 'High', num: true }, { key: 'normal', label: 'Normal', num: true }, { key: 'low', label: 'Low', num: true },
+      { key: 'total', label: 'Total', num: true, sort: openTotal, render: openTotal },
+      { key: 'oldestDays', label: 'Oldest (days)', num: true }
+    ], open, { sortKey: 'total' });
+    $('su-trend').innerHTML = hbars(z.weeks.slice(-6).map(function (w, i) { var k = z.weeks.length - 6 + i; return { label: w + ' created', v: z.created[k], text: z.created[k] + ' / ' + z.solved[k] + ' solved', hi: z.created[k] > z.solved[k] }; }), 35) +
+      '<p class="small muted">Solid bar = more tickets created than solved that week.</p>';
+    var rows = D.contracts.filter(function (c) { return c.type === 'SLA'; }).map(function (c) { return { c: c, tickets: z.quarterTickets[c.client] || 0 }; });
+    table($('su-sla'), [
+      { key: 'name', label: 'SLA', sort: function (r) { return r.c.name; }, render: function (r) { return esc(r.c.name); } },
+      { key: 'tickets', label: 'Tickets this quarter', num: true },
+      { key: 'used', label: 'Budget used vs time', sort: function (r) { return r.c.pctUsed; }, render: function (r) { return burn(r.c.pctUsed, r.c.pctElapsed) + '<div class="burn-legend">' + pct(r.c.pctUsed) + ' used · ' + pct(r.c.pctElapsed) + ' of cycle</div>'; } },
+      { key: 'per', label: 'Hours per ticket', num: true, sort: function (r) { return r.tickets ? r.c.used / r.c.dayRate * 7.5 / r.tickets : 0; }, render: function (r) { return r.tickets ? (r.c.used / r.c.dayRate * 7.5 / r.tickets).toFixed(1) : '–'; } }
+    ], rows, { sortKey: 'tickets' });
+  }
+
+  function renderPipeline() {
+    var s = scoped(), pays = s.payments;
+    $('fresh-pipeline').innerHTML = freshness([['Source', 'Payment Schedule 2025 workbook, 2026 columns (Payments list in build)'], ['Committed vs projected', 'not readable until Step 4']]);
+    var m = { Oct: 0, Nov: 0, Dec: 0 };
+    pays.forEach(function (p) { m[p.month] += p.amount; });
+    $('pi-kpis').innerHTML = kpi('October', gbp(m.Oct)) + kpi('November', gbp(m.Nov)) + kpi('December', gbp(m.Dec)) + kpi('Total Oct–Dec', gbp(m.Oct + m.Nov + m.Dec), pays.length + ' scheduled payments');
+    function group(key) {
+      var by = {};
+      pays.forEach(function (p) { var k = p[key] || '(none)'; var r = by[k] = by[k] || { name: k, Oct: 0, Nov: 0, Dec: 0, total: 0, clients: {} }; r[p.month] += p.amount; r.total += p.amount; r.clients[p.client] = 1; });
+      return Object.keys(by).map(function (k) { by[k].n = Object.keys(by[k].clients).length; return by[k]; });
+    }
+    var monthCols = ['Oct', 'Nov', 'Dec'].map(function (mo) { return { key: mo, label: mo, num: true, render: function (r) { return r[mo] ? gbp(r[mo]) : '–'; } }; });
+    function foot(blank) { return function () { return '<td>Total</td>' + (blank ? '<td></td>' : '') + '<td class="num">' + gbp(m.Oct) + '</td><td class="num">' + gbp(m.Nov) + '</td><td class="num">' + gbp(m.Dec) + '</td><td class="num">' + gbp(q4Total(pays)) + '</td>'; }; }
+    var totalCol = { key: 'total', label: 'Total', num: true, render: function (r) { return gbp(r.total); } };
+    table($('pi-table'), [{ key: 'name', label: 'Client', render: function (r) { return '<a href="#clients" data-client="' + esc(r.name) + '">' + esc(r.name) + '</a>'; } }].concat(monthCols, [totalCol]), group('client'), { sortKey: 'total', foot: foot(false) });
+    table($('pi-am-table'), [{ key: 'name', label: 'Account manager' }, { key: 'n', label: 'Clients', num: true }].concat(monthCols, [totalCol]), group('am'), { sortKey: 'total', foot: foot(true) });
+  }
+
+  function clientsList() {
+    var names = uniq([].concat(D.projects.map(function (p) { return p.client; }), D.contracts.map(function (c) { return c.client; }), D.payments.map(function (p) { return p.client; })));
+    if (state.pm !== 'all') { var cl = pmClients(state.pm); names = names.filter(function (n) { return cl[n]; }); }
+    return names.sort();
+  }
+
+  function renderClient() {
+    var sel = $('client-select'), names = clientsList(), cur = sel.value;
+    sel.innerHTML = names.map(function (n) { return '<option>' + esc(n) + '</option>'; }).join('');
+    sel.value = names.indexOf(cur) >= 0 ? cur : (names.indexOf('Client D') >= 0 ? 'Client D' : names[0]);
+    var name = sel.value;
+    var projects = D.projects.filter(function (p) { return p.client === name; });
+    var contracts = D.contracts.filter(function (c) { return c.client === name; });
+    var pays = D.payments.filter(function (p) { return p.client === name; });
+    var hist = D.history.filter(function (h) { return h.client === name; }).sort(function (a, b) { return b.yr - a.yr; });
+    var histOver = hist.filter(function (h) { return h.overrun > 0; }).length;
+    var lessons = D.lessons.filter(function (l) { return client(l.client) === name; });
+    var zd = D.zendesk.open.filter(function (o) { return o.client === name; })[0];
+    var pm = contracts[0] ? contracts[0].pm : (projects[0] ? projects[0].pm : '–');
+
+    var h = '<p class="muted">PM ' + esc(pm) + '</p>';
+    h += '<div class="kpis">' +
+      kpi('Active projects', projects.length, projects.length ? projects.filter(function (p) { return p.overrun > 0; }).length + ' at risk' : 'None active') +
+      kpi('SLAs and retainers', contracts.length, contracts.length ? contracts.map(function (c) { return pct(c.pctUsed) + ' used'; }).join(' · ') : 'None this quarter') +
+      kpi('Open tickets', zd ? openTotal(zd) : 0, zd ? 'Oldest ' + zd.oldestDays + ' days · dummy' : 'Dummy', null, true) +
+      kpi('Invoices due Oct–Dec', gbp(q4Total(pays)), pays.length + ' scheduled payments') +
+      kpi('Past projects', hist.length, hist.length ? histOver + ' of ' + hist.length + ' ran over' : 'No history found') + '</div>';
+    h += '<div class="ai-box"><h3><span class="ai-tag">AI draft</span> Client briefing</h3><p>' + esc(clientBrief(name, projects, contracts, pays, hist, histOver, zd)) + '</p>' +
+      sourceList(['Cost Tracker', 'SMT Budget Tracker Q4', 'Payment Schedule', 'Zendesk (dummy)']) + '</div>';
+    h += '<section><h2 class="section-title">Active projects</h2><div class="table-wrap"><table class="dt" id="cl-projects"></table></div></section>';
+    h += '<section><h2 class="section-title">SLAs and retainers</h2><div class="table-wrap"><table class="dt" id="cl-contracts"></table></div></section>';
+    h += '<div class="cols"><section><h2 class="section-title">Support tickets</h2>' + (zd ? '<div class="dummy-banner small">Dummy Zendesk data</div><div class="table-wrap"><table class="dt"><thead><tr><th>Urgent</th><th>High</th><th>Normal</th><th>Low</th><th>Oldest</th><th>This quarter</th></tr></thead><tbody><tr><td>' + zd.urgent + '</td><td>' + zd.high + '</td><td>' + zd.normal + '</td><td>' + zd.low + '</td><td>' + zd.oldestDays + ' days</td><td>' + (D.zendesk.quarterTickets[name] || 0) + '</td></tr></tbody></table></div>' : '<p class="muted">No open tickets.</p>') +
+      '<h2 class="section-title" style="margin-top:2rem">Invoices due, Oct–Dec 2026</h2><div class="table-wrap"><table class="dt" id="cl-pay"></table></div></section>';
+    var hs = health[name];
+    h += '<section><h2 class="section-title">Site health check</h2>' + (hs && Object.keys(hs).length ?
+      '<div class="table-wrap"><table class="dt"><thead><tr><th>Measure</th><th class="num">Score</th></tr></thead><tbody>' +
+      Object.keys(hs).map(function (k) { var v = hs[k]; return '<tr><td>' + esc(k) + '</td><td class="num">' + esc(typeof v === 'number' && v <= 1 ? Math.round(v * 100) : v) + '</td></tr>'; }).join('') +
+      '</tbody></table></div><p class="small muted">Q1 2026 health check tab of the SMT Budget Tracker.</p>' : '<p class="muted">No health check on record.</p>') + '</section></div>';
+    h += '<div class="cols"><section><h2 class="section-title">Past projects</h2>' + (hist.length ?
+      '<div class="table-wrap"><table class="dt"><thead><tr><th>Project</th><th class="num">Year</th><th class="num">Budget</th><th class="num">Var.</th></tr></thead><tbody>' +
+      hist.slice(0, 8).map(function (x) { return '<tr><td>' + esc(x.project) + '</td><td class="num">' + x.yr + '</td><td class="num">' + gbp(x.budget) + '</td><td class="num">' + signedPct(x.overrun) + '</td></tr>'; }).join('') +
+      '</tbody></table></div>' : '<p class="muted">No closed projects found under this name.</p>') + '</section>';
+    h += '<section><h2 class="section-title">Lessons from this client</h2>' + (lessons.length ? '<div class="stack">' + lessons.map(lessonCard).join('') + '</div>' : '<p class="muted">No lessons recorded yet.</p>') + '</section></div>';
+    $('client-body').innerHTML = h;
+    table($('cl-projects'), projectCols, projects, { sortKey: 'overrunUB' });
+    table($('cl-contracts'), contractCols(false), contracts, { sortKey: 'pctUsed' });
+    table($('cl-pay'), [
+      { key: 'item', label: 'Item' }, { key: 'month', label: 'Month', sort: function (p) { return ['Oct', 'Nov', 'Dec'].indexOf(p.month) * 10 + p.week; }, render: function (p) { return esc(p.month) + ' wk ' + p.week; } },
+      { key: 'amount', label: 'Amount', num: true, render: function (p) { return gbpFull(p.amount); } }
+    ], pays, { sortKey: 'month', dir: 1, foot: function (r) { return '<td>Total</td><td></td><td class="num">' + gbpFull(q4Total(r)) + '</td>'; } });
+  }
+
+  function clientBrief(name, projects, contracts, pays, hist, histOver, zd) {
+    var parts = [];
+    if (projects.length) {
+      var risk = projects.filter(function (p) { return p.overrun > 0; });
+      parts.push(name + ' has ' + projects.length + ' active project' + (projects.length > 1 ? 's' : '') + (risk.length ? ', of which ' + risk.map(function (p) { return p.project + ' (' + signedPct(p.overrunUB) + ' incl. unbillable)'; }).join(' and ') + ' ' + (risk.length > 1 ? 'are' : 'is') + ' at risk.' : ', all within budget.'));
+    }
+    contracts.forEach(function (c) { var e = endState(c); parts.push(c.name + ' is ' + pct(c.pctUsed) + ' used with ' + pct(c.pctElapsed) + ' of the cycle gone' + (e ? ' (' + e[0].toLowerCase() + ').' : '.')); });
+    if (zd) parts.push(openTotal(zd) + ' support tickets are open, the oldest ' + zd.oldestDays + ' days old.');
+    if (pays.length) parts.push(gbp(q4Total(pays)) + ' is scheduled to be invoiced before the end of the year.');
+    if (hist.length) parts.push(histOver + ' of ' + hist.length + ' closed projects ran over budget.');
+    return parts.join(' ') || 'Not enough data for a briefing yet.';
+  }
+
+  var lessonCat = 'All';
+  function renderLessons() {
+    table($('le-closures'), [
+      { key: 'project', label: 'Project', render: function (c) { return esc(c.project) + ' ' + typeTag(LESSON_TYPE[c.project]) + '<br><span class="small muted">' + esc(c.client) + ' · PM ' + esc(c.pm) + ' · reported ' + fmtDate(c.reported) + '</span>'; } },
+      { key: 'estDays', label: 'Est. days', num: true, render: function (c) { return c.estDays == null ? 'none' : c.estDays; } },
+      { key: 'actDays', label: 'Actual days', num: true },
+      { key: 'effortVar', label: 'Effort var.', num: true, sort: function (c) { return c.estDays ? c.actDays / c.estDays - 1 : -9; }, render: function (c) { return c.estDays ? signedPct(c.actDays / c.estDays - 1) : '–'; } },
+      { key: 'nonBillableDays', label: 'Non-billable days', num: true },
+      { key: 'finishSlipDays', label: 'Finish slip (days)', num: true },
+      { key: 'profit', label: 'Profit / loss', num: true, render: function (c) { return gbpFull(c.profit); } }
+    ], D.closures, { sortKey: 'profit', dir: 1 });
+    var cats = ['All'].concat(uniq(D.lessons.map(function (l) { return l.cat; })));
+    $('le-cats').innerHTML = cats.map(function (c) { return '<button type="button" class="chip" aria-pressed="' + (c === lessonCat) + '" data-cat="' + esc(c) + '">' + esc(c) + ' (' + (c === 'All' ? D.lessons.length : D.lessons.filter(function (l) { return l.cat === c; }).length) + ')</button>'; }).join('');
+    $('le-cats').querySelectorAll('.chip').forEach(function (b) { b.addEventListener('click', function () { lessonCat = b.getAttribute('data-cat'); renderLessons(); }); });
+    filterLessons();
+  }
+  function filterLessons() {
+    var q = $('le-search').value.trim().toLowerCase();
+    var res = D.lessons.filter(function (l) {
+      return (lessonCat === 'All' || l.cat === lessonCat) && (!q || (l.issue + ' ' + l.impact + ' ' + l.action + ' ' + l.project + ' ' + l.type).toLowerCase().indexOf(q) >= 0);
+    });
+    $('le-count').textContent = res.length + ' lesson' + (res.length === 1 ? '' : 's') + ' from ' + D.closures.length + ' closure reports';
+    $('le-list').innerHTML = res.map(lessonCard).join('') || '<p class="muted">No lessons match. Try a different word.</p>';
+  }
+
+  /* ---------- assistant: the three weekly questions ---------------------- */
+  var QUESTIONS = [
+    { q: 'What is our overall portfolio budget status?', a: function () {
+      var s = scoped(), pf = portfolio(s.projects);
+      return '<p>The active portfolio is <b>' + signedPct(pf.overrun, 1) + '</b> over budget including unbillable time (' + signedPct(pf.overrunBillable, 1) + ' on billable time only), ' + (pf.overrun < PORTFOLIO_TARGET ? 'inside' : 'outside') + ' the &lt; 10% target.</p><ul>' +
+        '<li>Forecast ' + gbp(pf.forecastUB) + ' against ' + gbp(pf.budget) + ' budget across ' + s.projects.length + ' projects.</li>' +
+        '<li>' + pf.overCount + ' projects are ' + gbp(pf.overAmount) + ' over between them; the other ' + pf.underCount + ' are ' + gbp(pf.underAmount) + ' under.</li>' +
+        '<li>Without the under-runs the portfolio would be ' + signedPct(pf.overAmount / pf.budget, 1) + ' over, so the target is being met partly because some projects are coming in under.</li></ul>' +
+        sourceList(['Cost Tracker, active projects (Float in build)']);
+    } },
+    { q: 'How is team utilisation, by department?', a: function () {
+      var u = utilisation(D.float.people);
+      return '<p>' + teamLine() + '</p><ul>' + depts().map(function (d) { var x = utilisation(D.float.people.filter(function (p) { return p.dept === d; })); return '<li><b>' + esc(d) + '</b>: ' + pct(x.util) + ' utilisation, ' + pct(x.vsTarget) + ' of target</li>'; }).join('') + '</ul>' +
+        '<p>' + (function () { var low = depts().map(function (d) { return { d: d, v: utilisation(D.float.people.filter(function (p) { return p.dept === d; })).vsTarget }; }).sort(function (a, b) { return a.v - b.v; })[0]; return u.vsTarget < 1 ? esc(low.d) + ' is furthest below target at ' + pct(low.v) + '.' : 'The team is at or above target.'; })() + '</p>' + sourceList(['Float logged time and people (dummy)', 'Role targets (placeholder)']);
+    } },
+    { q: 'Which projects are at risk?', a: function () {
+      var s = scoped(), rows = s.projects.filter(function (p) { return p.overrun > 0; }).sort(function (a, b) { return b.overrunUB - a.overrunUB; });
+      var cr = s.contracts.filter(function (c) { return contractStatus(c)[1] !== 'ok'; });
+      return '<p>' + rows.length + ' of ' + s.projects.length + ' active projects are forecast over budget:</p><ul>' + rows.map(function (p) { return '<li><b>' + esc(p.client + ': ' + p.project) + '</b>: ' + gbp(p.forecastUB) + ' incl. unbillable against ' + gbp(p.budget) + ' (' + signedPct(p.overrunUB) + ')</li>'; }).join('') + '</ul>' +
+        (cr.length ? '<p>Also at risk: ' + cr.map(function (c) { return esc(c.name) + ' (' + pct(c.pctUsed) + ' used, ' + pct(c.pctElapsed) + ' of cycle)'; }).join('; ') + '.</p>' : '') +
+        sourceList(['Cost Tracker, active projects', 'SMT Budget Tracker Q4']);
+    } },
+    { q: 'Draft the weekly SMT summary', a: function () {
+      return '<p><b>Delivery summary, week of 26 October 2026 (draft)</b></p>' + summaryText(scoped()) + '<p>Proposed actions: review Client G SLA usage with the client; confirm contract end dates (Marc); agree the portfolio overrun method.</p>' + sourceList(['Cost Tracker', 'SMT Budget Tracker Q4', 'Float (dummy)']);
+    } }
+  ];
+  function ask(i, text) {
+    var chat = $('as-chat');
+    chat.insertAdjacentHTML('beforeend', '<div class="msg user">' + esc(text || QUESTIONS[i].q) + '</div><div class="msg bot">' +
+      (i == null ? '<p>In this prototype the assistant only answers the suggested questions. In the build it answers free questions from the same data, and says when the data can’t answer them.</p>' : QUESTIONS[i].a()) + '</div>');
+    chat.lastElementChild.scrollIntoView({ block: 'nearest' });
+  }
+  function initAssistant() {
+    $('as-suggest').innerHTML = QUESTIONS.map(function (q, i) { return '<button type="button" class="chip" data-q="' + i + '">' + esc(q.q) + '</button>'; }).join('');
+    $('as-suggest').querySelectorAll('.chip').forEach(function (b) { b.addEventListener('click', function () { ask(+b.getAttribute('data-q')); }); });
+    $('as-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var v = $('as-input').value.trim(); if (!v) return;
+      var t = v.toLowerCase(), i = null;
+      if (/portfolio|overall budget|overrun/.test(t)) i = 0; else if (/utilis|people|department|billab/.test(t)) i = 1;
+      else if (/risk|over budget|project/.test(t)) i = 2; else if (/summary|smt|report/.test(t)) i = 3;
+      ask(i, v); $('as-input').value = '';
+    });
+  }
+
+  function renderModules() {
+    var c = D.contracts[0], p = D.projects[0];
+    $('mo-body').innerHTML =
+      '<section><h2 class="section-title">Weekly measure (R19)</h2><div class="measures" style="max-width:360px"><div class="measure"><span class="measure-label">Portfolio overrun</span><span class="measure-value">+8.1%</span><span class="measure-target">' + status('Inside target', 'ok') + ' Target &lt; 10%</span></div></div></section>' +
+      '<section><h2 class="section-title">KPI tile (R20)</h2><div class="kpis" style="max-width:520px">' + kpi('Contracts at risk', '4 of 18', 'Budget used ahead of time', '#contracts') + kpi('Open tickets', 72, 'Dummy data style', null, true) + '</div></section>' +
+      '<section><h2 class="section-title">Burn bar (R21)</h2><div style="max-width:320px">' + burn(0.74, 0.62) + '<div class="burn-legend">74% used · 62% of cycle</div></div><p class="small muted">Fill = budget used. Tick = time elapsed. Fill turns solid when it passes the tick.</p></section>' +
+      '<section><h2 class="section-title">Status labels (R22)</h2><p>' + status('At risk', 'bad') + ' ' + status('Ends in 45 days', 'warn') + ' ' + status('On track', 'ok') + ' ' + typeTag('Umbraco upgrade') + '</p></section>' +
+      '<section><h2 class="section-title">Attention item (R24)</h2><ul class="attention" style="max-width:640px"><li>' + status('At risk', 'bad') + '<span><a href="#projects">' + esc(p.client + ': ' + p.project) + '</a><span class="why">Forecast ' + gbp(p.forecastUB) + ' incl. unbillable against ' + gbp(p.budget) + ' budget</span></span></li></ul></section>' +
+      '<section><h2 class="section-title">Lesson card (R25)</h2><div style="max-width:640px">' + lessonCard(D.lessons[0]) + '</div></section>' +
+      '<section><h2 class="section-title">AI answer with sources (R26)</h2><div class="ai-box" style="max-width:640px"><h3><span class="ai-tag">AI draft</span> Answer</h3><p>' + esc(c.name) + ' is ' + pct(c.pctUsed) + ' used.</p>' + sourceList(['SMT Budget Tracker Q4']) + '</div></section>' +
+      '<section><h2 class="section-title">Data freshness strip (R27)</h2><div class="freshness">' + freshness([['Timesheets', 'complete Monday morning'], ['Float', 'synced 06:00 today']]) + '</div></section>';
+  }
+
+  /* ---------- routing ------------------------------------------------------ */
+  var VIEWS = ['hub', 'overview', 'projects', 'contracts', 'people', 'support', 'pipeline', 'clients', 'lessons', 'assistant', 'modules'];
+  var RENDER = { overview: renderOverview, clients: renderClient, projects: renderProject, contracts: renderContracts, people: renderPeople, support: renderSupport, pipeline: renderPipeline, lessons: renderLessons, modules: renderModules };
+  function route() {
+    var v = (location.hash || '#hub').slice(1);
+    if (VIEWS.indexOf(v) < 0) v = 'hub';
+    VIEWS.forEach(function (k) { $('view-' + k).classList.toggle('active', k === v); });
+    document.querySelectorAll('#mainnav a').forEach(function (a) {
+      if (a.getAttribute('href') === '#' + v) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+    if (RENDER[v]) RENDER[v]();
+    window.scrollTo(0, 0);
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    $('dept-select').insertAdjacentHTML('beforeend', depts().map(function (d) { return '<option>' + esc(d) + '</option>'; }).join(''));
+    $('viewas').addEventListener('change', function () { state.pm = this.value; route(); });
+    $('client-select').addEventListener('change', renderClient);
+    $('project-select').addEventListener('change', renderProject);
+    $('dept-select').addEventListener('change', renderPeople);
+    $('le-search').addEventListener('input', filterLessons);
+    initAssistant();
+
+    /* Deep links from tables: remember which project/client was clicked. */
+    document.addEventListener('click', function (e) {
+      var a = e.target.closest && e.target.closest('a[data-project], a[data-client]');
+      if (!a) return;
+      if (a.hasAttribute('data-project')) { $('project-select').innerHTML = '<option value="' + esc(a.getAttribute('data-project')) + '"></option>'; $('project-select').value = a.getAttribute('data-project'); }
+      if (a.hasAttribute('data-client')) { $('client-select').innerHTML = '<option>' + esc(a.getAttribute('data-client')) + '</option>'; }
+      if (location.hash === a.getAttribute('href')) { e.preventDefault(); route(); }
+    });
+
+    window.addEventListener('hashchange', route);
+    route();
+  });
+})();
+</script>
+</body>
+</html>

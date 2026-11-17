@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Delivery Hub prototypes</title>
+<style>
+:root{--bg:#f5f4f2;--bar:#ffffff;--ink:#1f1f1f;--ink-2:#5f5f5f;--line:#dedcd9;--accent:#1f1f1f;--accent-ink:#ffffff;--tag:#fff4ce;--tag-ink:#5c4300}
+@media (prefers-color-scheme: dark){:root{--bg:#1b1a19;--bar:#252423;--ink:#f3f2f1;--ink-2:#b5b3b1;--line:#3b3a39;--accent:#f3f2f1;--accent-ink:#1b1a19;--tag:#3d3420;--tag-ink:#f6e3a6}}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font:14px/1.4 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:10px 16px;background:var(--bar);border-bottom:1px solid var(--line)}
+header h1{font-size:16px;margin:0;font-weight:600;white-space:nowrap}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+nav a{display:block;padding:7px 14px;border-radius:6px;text-decoration:none;color:var(--ink);border:1px solid var(--line);white-space:nowrap}
+nav a[aria-current="page"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+nav a small{display:block;font-size:11px;opacity:.75}
+.sp{flex:1}
+.tag{background:var(--tag);color:var(--tag-ink);border-radius:999px;padding:3px 10px;font-size:12px}
+.newtab{font-size:13px;color:var(--ink-2)}
+iframe{flex:1;width:100%;border:0;background:#fff}
+</style>
+</head>
+<body>
+<header>
+  <h1>ClerksWell Delivery Hub</h1>
+  <nav aria-label="Prototypes">
+    <a href="#original" data-view="original">Original prototype<small>Full Delivery Hub, wireframes V2</small></a>
+    <a href="#mvp" data-view="mvp">Simplified MVP<small>Power BI model, existing data only</small></a>
+  </nav>
+  <span class="sp"></span>
+  <span class="tag">Anonymised sample data</span>
+  <a class="newtab" id="newtab" href="original/" target="_blank" rel="noopener">Open in new tab ↗</a>
+</header>
+<iframe id="frame" title="Prototype" src="original/"></iframe>
+<script>
+const VIEWS = {original: 'original/', mvp: 'mvp/'};
+function show(){
+  const v = VIEWS[location.hash.slice(1)] ? location.hash.slice(1) : 'original';
+  const f = document.getElementById('frame');
+  if (!f.getAttribute('src').startsWith(VIEWS[v])) f.src = VIEWS[v];
+  document.getElementById('newtab').href = VIEWS[v];
+  document.querySelectorAll('nav a').forEach(a => { if (a.dataset.view === v) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
+}
+window.addEventListener('hashchange', show);
+show();
+</script>
+</body>
+</html>

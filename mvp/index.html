@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Delivery Hub MVP</title>
+<style>
+:root{
+  --bg:#e9e7e5; --chrome:#ffffff; --chrome-2:#f8f7f6; --ink:#252423; --ink-2:#605e5c; --ink-3:#8a8886; --line:#e1dfdd;
+  --canvas:#f3f2f1; --card:#ffffff; --accent:#118dff; --navy:#12239e; --orange:#e66c37; --purple:#6b007b; --pink:#e044a7; --violet:#744ec2; --gold:#d9b300;
+  --bad:#d64550; --good:#1aab40; --warn:#e8a33d; --note:#fff4ce; --note-ink:#5c4300; --note-line:#e3c35a;
+}
+:root[data-theme="dark"]{ --bg:#1b1a19; --chrome:#252423; --chrome-2:#2d2c2b; --ink:#f3f2f1; --ink-2:#c8c6c4; --ink-3:#a19f9d; --line:#3b3a39; --note:#3d3420; --note-ink:#f6e3a6; --note-line:#7a6326;}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#1b1a19; --chrome:#252423; --chrome-2:#2d2c2b; --ink:#f3f2f1; --ink-2:#c8c6c4; --ink-3:#a19f9d; --line:#3b3a39; --note:#3d3420; --note-ink:#f6e3a6; --note-line:#7a6326;} }
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;overflow-x:hidden}
+button{font:inherit;color:inherit}
+.wrap{max-width:1340px;margin:0 auto;padding:16px}
+.top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.top h1{font-size:20px;margin:0;font-weight:600}
+.top p{margin:2px 0 0;color:var(--ink-2);font-size:13px}
+.modes{display:flex;gap:4px;background:var(--chrome);border:1px solid var(--line);border-radius:8px;padding:3px}
+.modes button{border:0;background:none;padding:6px 12px;border-radius:6px;cursor:pointer}
+.modes button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.notes-toggle{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2);cursor:pointer}
+/* Power BI chrome */
+.pbi{background:var(--chrome);border:1px solid var(--line);border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.pbi-bar{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;background:#252423;color:#fff;font-size:13px}
+.pbi-bar .logo{width:18px;height:18px;display:inline-grid;grid-template-columns:repeat(3,1fr);gap:2px;align-items:end}
+.pbi-bar .logo i{display:block;background:#f2c811;border-radius:1px}
+.pbi-bar .crumb{opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pbi-bar .sp{flex:1}
+.pbi-bar .ghost{opacity:.7;font-size:12px;white-space:nowrap}
+.pbi-tools{display:flex;gap:16px;align-items:center;height:34px;padding:0 12px;border-bottom:1px solid var(--line);font-size:12px;color:var(--ink-2);background:var(--chrome);white-space:nowrap;overflow:hidden}
+.pbi-body{display:flex;background:var(--chrome-2)}
+.stage{flex:1;min-width:0;padding:12px;position:relative}
+.scaler{position:relative;width:100%}
+.page{position:absolute;left:0;top:0;width:1280px;height:720px;background:var(--canvas);transform-origin:0 0;color:#252423;border:1px solid #d2d0ce}
+.filters{width:30px;border-left:1px solid var(--line);background:var(--chrome);writing-mode:vertical-rl;font-size:12px;color:var(--ink-2);padding:10px 6px;flex:0 0 auto}
+.tabs{display:flex;gap:2px;padding:0 8px;border-top:1px solid var(--line);background:var(--chrome);overflow-x:auto}
+.tabs button{border:0;border-top:3px solid transparent;background:none;padding:8px 14px;font-size:13px;cursor:pointer;white-space:nowrap;color:var(--ink-2)}
+.tabs button[aria-selected="true"]{border-top-color:#f2c811;color:var(--ink);font-weight:600;background:var(--chrome-2)}
+/* visuals (always light: it is a Power BI canvas) */
+.v{position:absolute;background:#fff;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.12);padding:10px 12px;overflow:hidden}
+.v h3{margin:0 0 6px;font-size:13px;font-weight:600;color:#252423}
+.v .sub{font-size:11px;color:#605e5c;margin:-4px 0 6px}
+.hdr{position:absolute;left:16px;top:10px;right:16px;height:44px;display:flex;align-items:center;gap:12px}
+.hdr .t{font-size:20px;font-weight:600;color:#252423;flex:1;white-space:nowrap}
+.hdr .t small{font-size:12px;font-weight:400;color:#605e5c;margin-left:10px}
+.slicer{display:flex;align-items:center;gap:6px;font-size:12px;color:#605e5c}
+.slicer select{font:12px "Segoe UI",system-ui,sans-serif;border:1px solid #c8c6c4;border-radius:2px;padding:4px 6px;background:#fff;color:#252423;min-width:120px}
+.chips{display:flex;gap:4px}
+.chips button{border:1px solid #c8c6c4;background:#fff;color:#252423;font-size:12px;padding:3px 10px;border-radius:2px;cursor:pointer}
+.chips button[aria-pressed="true"]{background:#252423;color:#fff;border-color:#252423}
+.kpi .lab{font-size:12px;color:#605e5c}
+.kpi .val{font-size:32px;font-weight:600;line-height:1.1;margin-top:4px;color:#252423}
+.kpi .val.bad{color:var(--bad)} .kpi .val.good{color:var(--good)}
+.kpi .foot{font-size:11px;color:#605e5c;margin-top:4px}
+table.t{width:100%;border-collapse:collapse;font-size:11.5px;color:#252423}
+table.t th{text-align:left;font-weight:600;border-bottom:1px solid #c8c6c4;padding:4px 6px;white-space:nowrap;position:sticky;top:0;background:#fff}
+table.t td{padding:3.5px 6px;border-bottom:1px solid #f0efee;vertical-align:middle}
+table.t td.n,table.t th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.t td.d{white-space:nowrap}
+table.t.roomy td{padding:9px 8px}
+table.t tr.tot td{font-weight:600;border-top:1px solid #c8c6c4}
+.scroll{overflow:auto;position:absolute;left:12px;right:12px;bottom:10px}
+.pill{display:inline-block;padding:1px 6px;border-radius:9px;font-size:10.5px;font-weight:600;white-space:nowrap}
+.pill.bad{background:#fbe3e5;color:#a4262c} .pill.ok{background:#dff6dd;color:#107c10} .pill.warn{background:#fff1d6;color:#8a5300} .pill.grey{background:#edebe9;color:#605e5c}
+.stale{color:#a19f9d;font-style:italic}
+.cell-bar{position:relative;height:14px;min-width:110px}
+.cell-bar .used{position:absolute;left:0;top:2px;height:10px;border-radius:1px}
+.cell-bar .tick{position:absolute;top:-1px;width:2px;height:16px;background:#252423}
+.cell-bar .lbl{position:absolute;right:0;top:-1px;font-size:10.5px;color:#252423;background:rgba(255,255,255,.8);padding-left:2px}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:#605e5c;margin-bottom:4px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:-1px}
+.banner{position:absolute;background:#fff4ce;border:1px solid #e3c35a;color:#5c4300;border-radius:4px;font-size:12px;padding:6px 10px;display:flex;gap:8px;align-items:center}
+.lesson{border-left:3px solid #118dff;padding:4px 8px;margin-bottom:6px;background:#faf9f8;font-size:11.5px}
+.lesson b{font-size:11px;color:#605e5c;font-weight:600}
+svg text{font-family:"Segoe UI",system-ui,sans-serif}
+/* build notes */
+.pin{position:absolute;width:20px;height:20px;border-radius:50%;background:#f2c811;color:#252423;font:700 11px/20px "Segoe UI",sans-serif;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.35);z-index:5;cursor:pointer;border:0;padding:0}
+body.nonotes .pin, body.nonotes .notes{display:none}
+.notes{margin-top:14px;background:var(--note);color:var(--note-ink);border:1px solid var(--note-line);border-radius:8px;padding:12px 16px}
+.notes h2{font-size:14px;margin:0 0 6px}
+.notes ol{margin:0;padding-left:22px;columns:2;column-gap:32px}
+.notes li{margin:0 0 6px;break-inside:avoid;font-size:13px}
+.notes li.hl{outline:2px solid var(--note-line);outline-offset:2px;border-radius:2px}
+@media (max-width:800px){.notes ol{columns:1}}
+/* plan view */
+.plan{display:none}
+body.mode-plan .plan{display:block} body.mode-plan .report{display:none}
+.doc{background:var(--chrome);border:1px solid var(--line);border-radius:8px;padding:20px 24px;max-width:1100px}
+.doc h2{font-size:18px;margin:22px 0 8px} .doc h2:first-child{margin-top:0}
+.doc p{margin:0 0 10px;max-width:80ch}
+.doc table{border-collapse:collapse;width:100%;font-size:13px;margin:6px 0 14px}
+.doc th,.doc td{text-align:left;border-bottom:1px solid var(--line);padding:7px 8px;vertical-align:top}
+.doc th{font-weight:600;color:var(--ink-2);font-size:12px}
+.tblwrap{overflow-x:auto}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:8px 0 14px}
+.step{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--chrome-2)}
+.step .k{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em}
+.step h3{margin:2px 0 4px;font-size:14px} .step p{font-size:12.5px;margin:0;color:var(--ink-2)}
+.step.now{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.doc ul{margin:0 0 12px;padding-left:20px} .doc li{margin-bottom:4px}
+</style>
+</head>
+<body class="mode-report">
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Delivery Hub MVP: a Power BI model</h1>
+      <p>Built only from the spreadsheets and lists as they are today. No Float, no Zendesk, no clean-up first. Anonymised sample data based on the 19 Oct 2026 sources: client names replaced and money figures scaled.</p>
+    </div>
+    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+      <label class="notes-toggle"><input type="checkbox" id="notesOn" checked> Build notes</label>
+      <div class="modes" role="group" aria-label="View">
+        <button data-mode="report" aria-pressed="true">Report model</button>
+        <button data-mode="plan" aria-pressed="false">How the MVP works</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="report">
+    <div class="pbi">
+      <div class="pbi-bar"><span class="logo"><i style="height:7px"></i><i style="height:12px"></i><i style="height:17px"></i></span><span class="crumb">Power BI&nbsp;&nbsp;›&nbsp;&nbsp;Delivery Hub workspace&nbsp;&nbsp;›&nbsp;&nbsp;<b>Delivery Hub (MVP)</b></span><span class="sp"></span><span class="ghost">Data updated 19/10/2026 07:00</span></div>
+      <div class="pbi-tools"><span>File ▾</span><span>Export ▾</span><span>Share</span><span>Subscribe to report</span><span>Bookmarks ▾</span><span>View ▾</span><span>Refresh visuals</span></div>
+      <div class="pbi-body">
+        <div class="stage"><div class="scaler" id="scaler"><div class="page" id="page"></div></div></div>
+        <div class="filters">› Filters</div>
+      </div>
+      <div class="tabs" role="tablist" id="tabs"></div>
+    </div>
+    <div class="notes" id="notes"><h2 id="notesTitle">Build notes</h2><ol id="notesList"></ol></div>
+  </div>
+
+  <div class="plan" id="plan"></div>
+</div>
+
+<script id="data" type="application/json">{"asOf": "2026-10-19", "costEdited": "2026-10-13", "projects": [{"client": "Client C", "project": "Website Rebuild 2026", "budget": 54592.5, "forecast": 72678.91, "forecastUB": 74808.1, "spend": 70015.86, "overrun": 0.3313, "overrunUB": 0.3703, "pm": "Beth", "due": "2026-11-04", "updated": "2026-10-13", "pastDue": false}, {"client": "Client B", "project": "policy platform migration", "budget": 68111.95, "forecast": 71199.75, "forecastUB": 71572.04, "spend": 58564.49, "overrun": 0.0453, "overrunUB": 0.0508, "pm": "Marc", "due": "2026-08-22", "updated": "2026-10-12", "pastDue": true}, {"client": "Client B", "project": "DMS \u2013 legal entity Configuration", "budget": 3697.5, "forecast": 2006.53, "forecastUB": 2006.63, "spend": 1810.69, "overrun": -0.4573, "overrunUB": -0.4573, "pm": "Marc", "due": "2026-09-01", "updated": "2026-10-12", "pastDue": true}, {"client": "Client D", "project": "Social Campaign", "budget": 8265.0, "forecast": 11515.22, "forecastUB": 13426.49, "spend": 11101.97, "overrun": 0.3933, "overrunUB": 0.6245, "pm": "Marc", "due": "2026-09-09", "updated": "2026-10-12", "pastDue": true}, {"client": "Client C", "project": "Migration and Upgrade of Resource Centre", "budget": 5176.5, "forecast": 8844.2, "forecastUB": 8844.05, "spend": 7017.2, "overrun": 0.7085, "overrunUB": 0.7085, "pm": "Beth", "due": "2026-09-01", "updated": "2026-08-25", "pastDue": true}, {"client": "Client E", "project": "Azure Landing Zone Migration Support", "budget": 5481.0, "forecast": 3915.0, "forecastUB": 3915.08, "spend": 3915.0, "overrun": -0.2857, "overrunUB": -0.2857, "pm": "Beth", "due": "2026-08-19", "updated": "2026-08-25", "pastDue": true}, {"client": "Client A", "project": "Client portal", "budget": 9396.0, "forecast": 8441.72, "forecastUB": 8441.37, "spend": 2960.72, "overrun": -0.1016, "overrunUB": -0.1016, "pm": "Marc", "due": "2026-09-24", "updated": "2026-09-21", "pastDue": true}, {"client": "Client B", "project": "policy platform Sharepoint Plugin Knowledge Share", "budget": 6481.5, "forecast": 3564.4, "forecastUB": 3564.18, "spend": 3159.3, "overrun": -0.4501, "overrunUB": -0.4501, "pm": "Marc", "due": "2026-09-23", "updated": "2026-10-12", "pastDue": true}, {"client": "Client D", "project": "Umbraco v17 Upgrade", "budget": 8678.25, "forecast": 10494.49, "forecastUB": 12069.71, "spend": 4708.99, "overrun": 0.2093, "overrunUB": 0.3908, "pm": "Marc", "due": "2026-11-28", "updated": "2026-10-12", "pastDue": false}, {"client": "Client E", "project": "New Environments Work", "budget": 12528.0, "forecast": 10007.72, "forecastUB": 10007.37, "spend": 611.72, "overrun": -0.2012, "overrunUB": -0.2012, "pm": "Beth", "due": "2026-09-30", "updated": "2026-09-17", "pastDue": true}, {"client": "Client B", "project": "policy platform Integration Disaster Recovery", "budget": 8678.25, "forecast": 5992.12, "forecastUB": 5992.33, "spend": 3925.88, "overrun": -0.3095, "overrunUB": -0.3095, "pm": "Marc", "due": "2026-10-09", "updated": "2026-10-12", "pastDue": true}, {"client": "Client F", "project": "Interactive Visualisation", "budget": 5481.0, "forecast": 2226.66, "forecastUB": 2226.93, "spend": 1443.66, "overrun": -0.5937, "overrunUB": -0.5937, "pm": "Marc", "due": "2026-10-14", "updated": "2026-10-12", "pastDue": true}, {"client": "Client A", "project": "Website Performance Improvements", "budget": 63423.0, "forecast": 64189.37, "forecastUB": 64190.42, "spend": 10162.37, "overrun": 0.0121, "overrunUB": 0.0121, "pm": "Beth", "due": "2026-11-30", "updated": "2026-10-13", "pastDue": false}], "trend": [{"yr": 2021, "n": 9, "over": 1, "portfolio": -0.019}, {"yr": 2022, "n": 33, "over": 9, "portfolio": 0.312}, {"yr": 2023, "n": 39, "over": 18, "portfolio": 0.146}, {"yr": 2024, "n": 31, "over": 7, "portfolio": 0.152}, {"yr": 2025, "n": 31, "over": 8, "portfolio": 0.136}, {"yr": 2026, "n": 29, "over": 12, "portfolio": 0.14}], "contracts": [{"name": "Client K SLA (Q4 Oct - Dec 2026)", "client": "Client K", "type": "SLA", "budget": 9396.0, "used": 284.82, "pctUsed": 0.0303, "pctElapsed": 0.197, "pm": "Marc", "am": "Kat", "cycleStart": "2026-10-01", "cycleEnd": "2026-12-31", "contractEnd": "2026-09-30", "endPast": true, "days": 12, "remainingDays": 11.64}, {"name": "Client D SLA (Q4 Oct - Dec 2026)", "client": "Client D", "type": "SLA", "budget": 4959.0, "used": 446.31, "pctUsed": 0.09, "pctElapsed": 0.197, "pm": "Marc", "am": "Olivia", "cycleStart": "2026-10-01", "cycleEnd": "2026-12-31", "contractEnd": "2026-06-30", "endPast": true, "days": 6, "remainingDays": 5.46}, {"name": "Client J SLA 2026", "client": "Client J", "type": "SLA", "budget": 9396.0, "used": 5770.71, "pctUsed": 0.6142, "pctElapsed": 0.7969, "pm": "Beth", "am": "Olivia", "cycleStart": "2026-01-01", "cycleEnd": "2026-12-31", "contractEnd": "2026-12-31", "endPast": false, "days": 12, "remainingDays": 4.63}, {"name": "Client F Group SLA (Q4 2026)", "client": "Client F", "type": "SLA", "budget": 4698.0, "used": 880.88, "pctUsed": 0.1875, "pctElapsed": 0.197, "pm": "Beth", "am": "Harry", "cycleStart": "2026-10-01", "cycleEnd": "2026-12-31", "contractEnd": "2026-06-30", "endPast": true, "days": 6, "remainingDays": 4.88}, {"name": "Client L SLA (Q4 Oct - Dec 2026)", "client": "Client L", "type": "SLA", "budget": 4959.0, "used": 67.16, "pctUsed": 0.0135, "pctElapsed": 0.197, "pm": "Marc", "am": "Olivia", "cycleStart": "2026-10-01", "cycleEnd": "2026-12-31", "contractEnd": "2026-12-31", "endPast": false, "days": 6, "remainingDays": 5.92}, {"name": "Client E SLA (Q4 2026)", "client": "Client E", "type": "SLA", "budget": 7047.0, "used": 611.72, "pctUsed": 0.0868, "pctElapsed": 0.197, "pm": "Marc", "am": "Olivia", "cycleStart": "2026-10-01", "cycleEnd": "2026-12-31", "contractEnd": "2026-06-30", "endPast": true, "days": 9, "remainingDays": 8.22}, {"name": "Client H - SLA Q4 2026", "client": "Client H", "type": "SLA", "budget": 7438.5, "used": 129.14, "pctUsed": 0.0174, "pctElapsed": 0.197, "pm": "Beth", "am": "Harry", "cycleStart": "2026-10-01", "cycleEnd": "2026-12-31", "contractEnd": "2026-12-31", "endPast": false, "days": 9, "remainingDays": 8.84}, {"name": "Client I SLA (Q3-4 August - November)", "client": "Client I", "type": "SLA", "budget": 4437.0, "used": 3297.25, "pctUsed": 0.7431, "pctElapsed": 0.6212, "pm": "Marc", "am": "Harry", "cycleStart": "2026-08-22", "cycleEnd": "2026-11-23", "contractEnd": "2029-04-27", "endPast": false, "days": 6, "remainingDays": 1.54}, {"name": "Client A MSA Q4 2026", "client": "Client A", "type": "SLA", "budget": 8613.0, "used": 1272.38, "pctUsed": 0.1477, "pctElapsed": 0.197, "pm": "Beth", "am": "Harry", "cycleStart": "2026-10-01", "cycleEnd": "2026-12-31", "contractEnd": "2026-12-31", "endPast": false, "days": 11, "remainingDays": 9.38}, {"name": "Client B SLA (Q3-4 August - November 2026)", "client": "Client B", "type": "SLA", "budget": 7047.0, "used": 2903.96, "pctUsed": 0.4121, "pctElapsed": 0.6212, "pm": "Marc", "am": "Olivia", "cycleStart": "2026-08-24", "cycleEnd": "2026-11-23", "contractEnd": "2027-02-23", "endPast": false, "days": 9, "remainingDays": 5.29}, {"name": "Client G SLA 2026", "client": "Client G", "type": "SLA", "budget": 2192.4, "used": 4237.88, "pctUsed": 1.933, "pctElapsed": 0.6314, "pm": "Beth", "am": "Kat", "cycleStart": "2026-03-09", "cycleEnd": "2027-02-28", "contractEnd": "2027-02-28", "endPast": false, "days": 3.6, "remainingDays": -3.36}, {"name": "Client D Ltd (Q4 Oct - Dec 2026)", "client": "Client D", "type": "Retainer", "budget": 8265.0, "used": 2014.6, "pctUsed": 0.2438, "pctElapsed": 0.197, "pm": "Marc", "am": "Olivia", "cycleStart": "2026-10-01", "cycleEnd": "2026-12-31", "contractEnd": "2026-06-30", "endPast": true, "days": 10, "remainingDays": 7.56}, {"name": "Client F Group Retainer (Q4 2026)", "client": "Client F", "type": "Retainer", "budget": 3915.0, "used": 0.0, "pctUsed": 0.0, "pctElapsed": 0.197, "pm": "Beth", "am": "Harry", "cycleStart": "2026-10-01", "cycleEnd": "2026-12-31", "contractEnd": "2026-06-30", "endPast": true, "days": 5, "remainingDays": 5}, {"name": "Client E BAU Retainer (Q4 Oct - Dec 2026)", "client": "Client E", "type": "Retainer", "budget": 3915.0, "used": 0.0, "pctUsed": 0.0, "pctElapsed": 0.197, "pm": "Marc", "am": "Olivia", "cycleStart": "2026-10-01", "cycleEnd": "2026-12-31", "contractEnd": "2026-06-30", "endPast": true, "days": 5, "remainingDays": 5}, {"name": "Client E CRM Retainer (Q4 Oct - Dec 2026)", "client": "Client E", "type": "Retainer", "budget": 11745.0, "used": 0.0, "pctUsed": 0.0, "pctElapsed": 0.197, "pm": "Marc", "am": "Olivia", "cycleStart": "2026-10-01", "cycleEnd": "2026-12-31", "contractEnd": "2026-09-21", "endPast": true, "days": 77, "remainingDays": 15}, {"name": "Client H - H2 Backlog 2026", "client": "Client H", "type": "Retainer", "budget": 24795.0, "used": 51.66, "pctUsed": 0.0021, "pctElapsed": 0.5985, "pm": "Beth", "am": "Harry", "cycleStart": "2026-07-01", "cycleEnd": "2026-12-31", "contractEnd": "2026-03-31", "endPast": true, "days": 35, "remainingDays": 29.94}, {"name": "Client H - Q4 Maintenance 2026", "client": "Client H", "type": "Retainer", "budget": 4959.0, "used": 0.0, "pctUsed": 0.0, "pctElapsed": 0.197, "pm": "Beth", "am": "Harry", "cycleStart": "2026-10-01", "cycleEnd": "2026-12-31", "contractEnd": "2026-03-31", "endPast": true, "days": 6, "remainingDays": 6}, {"name": "Client A Retainer Q1-4 2026", "client": "Client A", "type": "Retainer", "budget": 27013.5, "used": 24688.97, "pctUsed": 0.9139, "pctElapsed": 0.197, "pm": "Beth", "am": "Harry", "cycleStart": "2026-10-01", "cycleEnd": "2026-12-31", "contractEnd": "2026-12-31", "endPast": false, "days": 15, "remainingDays": 2.97}], "payments": [{"client": "Client K", "item": "SLA", "am": "Kat", "month": "Nov", "week": 3, "amount": 10335.6}, {"client": "Client D", "item": "Umbraco cloud (renewed annually)", "am": "Harry", "month": "Oct", "week": 2, "amount": 4236.9}, {"client": "Client D", "item": "SLA", "am": "Harry", "month": "Nov", "week": 4, "amount": 4959.0}, {"client": "Client D", "item": "Retainer", "am": "(blank)", "month": "Nov", "week": 4, "amount": 8265.0}, {"client": "Client J", "item": "SLA", "am": "Kat", "month": "Oct", "week": 1, "amount": 9918.0}, {"client": "Client J", "item": "Umbraco v.17 upgrade", "am": "Kat", "month": "Oct", "week": 3, "amount": 18137.54}, {"client": "Client J", "item": "Umbraco v.17 upgrade", "am": "Kat", "month": "Oct", "week": 4, "amount": 10580.23}, {"client": "Client F", "item": "SLA", "am": "Harry", "month": "Nov", "week": 2, "amount": 4698.0}, {"client": "Client F", "item": "Retainer", "am": "Harry", "month": "Nov", "week": 2, "amount": 3915.0}, {"client": "Client F", "item": "Website Improvement", "am": "(blank)", "month": "Oct", "week": 4, "amount": 13050.0}, {"client": "Client F", "item": "SEO Retainer", "am": "(blank)", "month": "Nov", "week": 1, "amount": 4698.0}, {"client": "Client L", "item": "SLA", "am": "Kat", "month": "Nov", "week": 2, "amount": 4959.0}, {"client": "Client L", "item": "Umbraco cloud (renewed annually)", "am": "Kat", "month": "Nov", "week": 2, "amount": 4236.9}, {"client": "Client E", "item": "SLA", "am": "Beth", "month": "Nov", "week": 4, "amount": 7047.0}, {"client": "Client E", "item": "retainer", "am": "Beth", "month": "Nov", "week": 4, "amount": 3915.0}, {"client": "Client E", "item": "Change requests", "am": "Beth", "month": "Nov", "week": 3, "amount": 8700.0}, {"client": "Client E", "item": "CRM retainer [27 > 13.5 for invs 3+4]", "am": "Beth", "month": "Nov", "week": 4, "amount": 11745.0}, {"client": "Client E", "item": "Manifesto handover", "am": "Beth", "month": "Nov", "week": 1, "amount": 4350.0}, {"client": "Client H", "item": "SLA", "am": "Harry", "month": "Nov", "week": 2, "amount": 7438.5}, {"client": "Client H", "item": "Retainer", "am": "Harry", "month": "Nov", "week": 2, "amount": 33886.5}, {"client": "Client H", "item": "CMS AI Enhancement", "am": "Harry", "month": "Nov", "week": 1, "amount": 4350.0}, {"client": "Client M", "item": ".NET Upgrade", "am": "Kat", "month": "Nov", "week": 4, "amount": 17400.0}, {"client": "Client M", "item": ".NET Upgrade", "am": "Kat", "month": "Dec", "week": 4, "amount": 13050.0}, {"client": "Client M", "item": "SLA", "am": "Kat", "month": "Oct", "week": 1, "amount": 5220.0}, {"client": "Client A", "item": "Retainer", "am": "Harry", "month": "Dec", "week": 2, "amount": 11745.0}, {"client": "Client A", "item": "SLA", "am": "Harry", "month": "Dec", "week": 2, "amount": 8613.0}, {"client": "Client A", "item": "Website Performance Improvement", "am": "Harry", "month": "Nov", "week": 2, "amount": 28275.0}, {"client": "Client A", "item": "Client Area Project", "am": "Harry", "month": "Dec", "week": 1, "amount": 13050.0}, {"client": "Client B", "item": "SLA", "am": "Harry", "month": "Nov", "week": 4, "amount": 31946.4}, {"client": "Client B", "item": "New Claims requirement", "am": "Harry", "month": "Oct", "week": 4, "amount": 8700.0}, {"client": "Client B", "item": "phase 2 migration CR", "am": "Harry", "month": "Oct", "week": 1, "amount": 6776.95}, {"client": "Client G", "item": "Support", "am": "Kat", "month": "Dec", "week": 2, "amount": 2192.4}, {"client": "Client I", "item": "Retainer", "am": "Harry", "month": "Nov", "week": 4, "amount": 11092.5}, {"client": "Client I", "item": "Umbraco Cloud", "am": "Harry", "month": "Oct", "week": 4, "amount": 19000.8}, {"client": "Client I", "item": "Cloud Migration", "am": "Harry", "month": "Nov", "week": 1, "amount": 18015.09}, {"client": "Client I", "item": "Cloud Migration", "am": "Harry", "month": "Nov", "week": 4, "amount": 18015.09}, {"client": "Client I", "item": "Hosting", "am": "Harry", "month": "Oct", "week": 3, "amount": 14254.95}, {"client": "Client I", "item": "SLA", "am": "Harry", "month": "Oct", "week": 3, "amount": 11092.5}, {"client": "Client N", "item": "SEO Audit", "am": "Harry", "month": "Nov", "week": 4, "amount": 4350.0}, {"client": "Client N", "item": "SEO Retainer", "am": "Harry", "month": "Oct", "week": 4, "amount": 7395.0}, {"client": "Client N", "item": "SEO Retainer", "am": "Harry", "month": "Nov", "week": 4, "amount": 4350.0}, {"client": "Client O", "item": "Website Deposit", "am": "Harry", "month": "Oct", "week": 1, "amount": 25095.15}, {"client": "Client O", "item": "Milestone 2", "am": "Harry", "month": "Nov", "week": 1, "amount": 12547.14}, {"client": "Client O", "item": "Milestone 3", "am": "Harry", "month": "Dec", "week": 2, "amount": 12547.14}, {"client": "Client C", "item": "Immersion, Define, Design", "am": "Harry", "month": "Oct", "week": 2, "amount": 12484.5}, {"client": "Client C", "item": "Development Payment", "am": "Harry", "month": "Nov", "week": 1, "amount": 6242.25}, {"client": "Client R Group", "item": "SLA", "am": "Leo", "month": "Oct", "week": 2, "amount": 7830.0}, {"client": "Client Q", "item": "SLA", "am": "Leo", "month": "Nov", "week": 3, "amount": 4176.0}, {"client": "Client AI", "item": "Licence renewal", "am": "Leo", "month": "Dec", "week": 4, "amount": 41842.83}], "closures": [{"project": "Client E payment gateway", "client": "Client E", "pm": "Marc", "type": "Integration", "reported": "2026-04-23", "estDays": 29.75, "actDays": 39.83, "estBudget": 23294.25, "actBudget": 31189.82, "nonBillableDays": 5.22, "finishSlipDays": 13, "profit": 7699.33, "satisfaction": null}, {"project": "Client L Umbraco v13 to v17 upgrade", "client": "Client L", "pm": "Marc", "type": "Umbraco upgrade", "reported": "2026-07-21", "estDays": 21.5, "actDays": 46.74, "estBudget": 17769.75, "actBudget": 29725.07, "nonBillableDays": 3.68, "finishSlipDays": 16, "profit": -528.96, "satisfaction": null}, {"project": "Client G Umbraco Cloud rebuild", "client": "Client G", "pm": "Beth", "type": "Umbraco rebuild", "reported": "2026-04-27", "estDays": null, "actDays": 48.85, "estBudget": null, "actBudget": null, "nonBillableDays": 47.23, "finishSlipDays": 0, "profit": -18490.54, "satisfaction": null}], "lessons": [{"project": "Client L Umbraco v13 to v17 upgrade", "client": "Client L", "cat": "Estimation", "owner": "MS", "issue": "A task for 'Migration of nested content to block list' was missed from the original estimate.", "impact": "5 days of extra effort that could have been billed in the original estimate.", "action": "Highlighted to the sales team so the task is not missed in future upgrade estimates."}, {"project": "Client L Umbraco v13 to v17 upgrade", "client": "Client L", "cat": "Estimation", "owner": "MS", "issue": "QA was sold at 3 days, which only covered release 1 of a two-release upgrade.", "impact": "Extra QA effort contributed to the overburn and pulled QA time from other projects.", "action": "Two-phase projects need a QA allocation per phase."}, {"project": "Client L Umbraco v13 to v17 upgrade", "client": "Client L", "cat": "Estimation", "owner": "MS", "issue": "No tech lead budget was sold, and only 1 day of deployment for a two-release approach.", "impact": "Tech lead support and a second deployment were added without budget.", "action": "All projects should have a tech lead allocation and one deployment allocation per production release. PMs to check SOWs."}, {"project": "Client L Umbraco v13 to v17 upgrade", "client": "Client L", "cat": "Platform", "owner": "MS", "issue": "The TipTap rich text editor in Umbraco v17 has known restrictions and defects.", "impact": "A lot of time was spent fixing rich text editor issues.", "action": "Check client requirements (e.g. iframes) against TipTap, and check the latest Umbraco version for fixes before committing."}, {"project": "Client L Umbraco v13 to v17 upgrade", "client": "Client L", "cat": "QA", "owner": "MS", "issue": "Playwright IP had to be whitelisted by Umbraco to reach QA and staging environments.", "impact": "QA activities were blocked until it was resolved.", "action": "QA should request Umbraco whitelisting ahead of project kick-off."}, {"project": "Client L Umbraco v13 to v17 upgrade", "client": "Client L", "cat": "QA", "owner": "MS", "issue": "Client UAT in preview mode found bugs our QA had missed.", "impact": "Delays in UAT.", "action": "Consider testing in preview mode as part of QA."}, {"project": "Client L Umbraco v13 to v17 upgrade", "client": "Client L", "cat": "Platform", "owner": "MS", "issue": "Migrating nested content to block list was slow.", "impact": "Risk of more unbudgeted cost.", "action": "SQL scripts cut the media picker migration to 1.5 days. Reuse this approach on future upgrades."}, {"project": "Client E payment gateway", "client": "Client E", "cat": "Third party", "owner": "MS", "issue": "The payment gateway was an early product release and versions changed during the project without notice.", "impact": "Confusion over which features were available.", "action": "Watch-out only."}, {"project": "Client E payment gateway", "client": "Client E", "cat": "Third party", "owner": "MS", "issue": "Third-party production environments arrived late.", "impact": "Unplanned extended hours close to release and compressed final validation.", "action": "Secure production or production-like environments as early as possible on integration projects."}, {"project": "Client G Umbraco Cloud rebuild", "client": "Client G", "cat": "Third party", "owner": "VA", "issue": "First use of the vehicle listings API; time was needed to learn how it works and what data it returns.", "impact": "Affected the car stock listing and stock availability pages.", "action": "vehicle listings needs to technically validate an integration before production API access is granted. Plan for this on similar clients."}, {"project": "Client G Umbraco Cloud rebuild", "client": "Client G", "cat": "Platform", "owner": "VA", "issue": "Reusable modules could output a default H1 wherever they were placed.", "impact": "Risk of broken heading hierarchy and SEO problems.", "action": "Added a backoffice toggle on multi-use components so editors choose whether the title is an H1."}, {"project": "Client G Umbraco Cloud rebuild", "client": "Client G", "cat": "Estimation", "owner": "BM", "issue": "The build was meant to be like-for-like but the approved redesign was implemented during the rebuild.", "impact": "Scope grew; closure report shows 47 non-billable days and no baseline estimate.", "action": "Re-baseline the estimate when scope changes before build starts."}], "volkerExcluded": 6, "historyN": 158}</script>
+<script>
+const D = JSON.parse(document.getElementById('data').textContent);
+const AS = D.asOf;
+const S = {page:'overview', pm:'All', client:'All', ctype:'All', lcat:'All'};
+const C = {blue:'#118dff', navy:'#12239e', orange:'#e66c37', purple:'#6b007b', pink:'#e044a7', violet:'#744ec2', gold:'#d9b300', bad:'#d64550', good:'#1aab40', grey:'#c8c6c4'};
+const AMCOL = {Harry:C.blue, Kat:C.navy, Beth:C.orange, Leo:C.purple, Olivia:C.violet, '(blank)':C.grey};
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const gbp = (n, dp) => '£' + (Math.abs(n) >= 1000 && !dp ? (n/1000).toFixed(1) + 'k' : Math.round(n).toLocaleString('en-GB'));
+const gbpFull = n => (n<0?'−':'') + '£' + Math.round(Math.abs(n)).toLocaleString('en-GB');
+const pct = (n, dp=1) => (n>0?'+':n<0?'−':'') + Math.abs(n*100).toFixed(dp) + '%';
+const pct0 = n => Math.round(n*100) + '%';
+const dt = s => { if(!s) return ''; const d = new Date(s+'T00:00:00'); return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'}); };
+
+/* ---------- filtering ---------- */
+const fProjects = () => D.projects.filter(p => (S.pm==='All'||p.pm===S.pm) && (S.client==='All'||p.client===S.client));
+const fContracts = () => D.contracts.filter(c => (S.pm==='All'||c.pm===S.pm) && (S.client==='All'||c.client===S.client) && (S.ctype==='All'||c.type===S.ctype));
+const fPayments = () => D.payments.filter(p => (S.client==='All'||p.client===S.client));
+const fClosures = () => D.closures.filter(c => (S.pm==='All'||c.pm===S.pm) && (S.client==='All'||c.client===S.client));
+const fLessons = () => { const ps = new Set(fClosures().map(c=>c.project)); return D.lessons.filter(l => ps.has(l.project) && (S.lcat==='All'||l.cat===S.lcat)); };
+const clients = [...new Set([...D.projects,...D.contracts,...D.payments].map(x=>x.client))].sort();
+const atRiskC = c => c.pctUsed > c.pctElapsed;
+
+/* ---------- small building blocks ---------- */
+function V(x,y,w,h,inner,cls=''){ return `<div class="v ${cls}" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px">${inner}</div>`; }
+function pin(n,x,y){ return `<button class="pin" style="left:${x}px;top:${y}px" data-n="${n}" aria-label="Build note ${n}">${n}</button>`; }
+function header(title, sub, opts={}){
+  const pm = opts.pm!==false ? `<div class="slicer">PM <div class="chips">${['All','Beth','Marc'].map(v=>`<button data-pm="${v}" aria-pressed="${S.pm===v}">${v}</button>`).join('')}</div></div>` : '';
+  const cl = opts.client===false ? '' : `<div class="slicer">Client <select data-client>${['All',...clients].map(v=>`<option ${S.client===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>`;
+  return `<div class="hdr"><div class="t">${title}<small>${sub}</small></div>${opts.extra||''}${pm}${cl}</div>`;
+}
+function kpi(lab,val,foot,cls=''){ return `<div class="kpi"><div class="lab">${lab}</div><div class="val ${cls}">${val}</div><div class="foot">${foot}</div></div>`; }
+function burn(used, elapsed){
+  const w = Math.min(used,1.2)/1.2*100, t = Math.min(elapsed,1.2)/1.2*100;
+  const col = used>elapsed ? C.bad : C.blue;
+  return `<div class="cell-bar"><div class="used" style="width:${w}%;background:${col}"></div><div class="tick" style="left:${t}%"></div><span class="lbl">${pct0(used)}</span></div>`;
+}
+function empty(msg='No data for this filter'){ return `<div style="color:#8a8886;font-size:12px;padding:20px 0;text-align:center">${msg}</div>`; }
+
+/* diverging horizontal bar */
+function hbarDiverge(rows, w, h, key, labelKey){
+  if(!rows.length) return empty();
+  const L = 196, R = 44, pad=4, bh = Math.min(18,(h-20)/rows.length - pad);
+  const max = Math.max(...rows.map(r=>Math.abs(r[key])), .1);
+  const mid = L + (w-L-R)/2, sc = (w-L-R)/2/max;
+  let s = `<svg width="${w}" height="${h}" role="img">`;
+  s += `<line x1="${mid}" x2="${mid}" y1="0" y2="${h-14}" stroke="#c8c6c4"/>`;
+  rows.forEach((r,i)=>{ const y = i*(bh+pad); const v=r[key]; const x = v<0? mid+v*sc : mid; const bw=Math.abs(v)*sc;
+    s += `<text x="${L-6}" y="${y+bh/2+4}" font-size="10.5" text-anchor="end" fill="#252423">${esc(r[labelKey].length>32? r[labelKey].slice(0,31)+'…' : r[labelKey])}</text>`;
+    s += `<rect x="${x}" y="${y}" width="${Math.max(bw,1)}" height="${bh}" fill="${v>0?C.bad:C.good}"><title>${esc(r[labelKey])}: ${pct(v)}</title></rect>`;
+    s += `<text x="${v<0? x-4 : x+bw+4}" y="${y+bh/2+4}" font-size="10" text-anchor="${v<0?'end':'start'}" fill="#605e5c">${pct(v,0)}</text>`;
+  });
+  s += `<text x="${mid}" y="${h-2}" font-size="10" text-anchor="middle" fill="#8a8886">◀ under budget · over budget ▶</text></svg>`;
+  return s;
+}
+/* stacked columns */
+function stackedCols(cats, series, w, h){
+  const L=46,B=22,T=14; const tot = cats.map(c=>series.reduce((a,s)=>a+(s.vals[c]||0),0));
+  const max = Math.max(...tot,1); const nice = Math.ceil(max/50000)*50000; const cw=(w-L-10)/cats.length; const bw=Math.min(70,cw*.55);
+  let s=`<svg width="${w}" height="${h}" role="img">`;
+  for(let g=0;g<=4;g++){ const v=nice*g/4, y=h-B-(h-B-T)*g/4; s+=`<line x1="${L}" x2="${w}" y1="${y}" y2="${y}" stroke="#edebe9"/><text x="${L-6}" y="${y+3}" font-size="10" text-anchor="end" fill="#8a8886">£${v/1000}k</text>`; }
+  cats.forEach((c,i)=>{ let y0=h-B; const x=L+i*cw+(cw-bw)/2;
+    series.forEach(se=>{ const v=se.vals[c]||0; if(!v) return; const bh=(h-B-T)*v/nice; y0-=bh; s+=`<rect x="${x}" y="${y0}" width="${bw}" height="${bh}" fill="${se.col}"><title>${esc(se.name)} · ${c}: ${gbpFull(v)}</title></rect>`; });
+    s+=`<text x="${x+bw/2}" y="${y0-4}" font-size="10.5" text-anchor="middle" fill="#252423" font-weight="600">${gbp(tot[i])}</text>`;
+    s+=`<text x="${x+bw/2}" y="${h-6}" font-size="11" text-anchor="middle" fill="#605e5c">${c}</text>`; });
+  return s+'</svg>';
+}
+/* simple horizontal bars */
+function hbars(rows, w, h, col){
+  if(!rows.length) return empty();
+  const L=150, R=56, pad=4; const bh=Math.min(16,(h)/rows.length-pad); const max=Math.max(...rows.map(r=>r.v),1);
+  let s=`<svg width="${w}" height="${h}" role="img">`;
+  rows.forEach((r,i)=>{ const y=i*(bh+pad), bw=(w-L-R)*r.v/max;
+    s+=`<text x="${L-6}" y="${y+bh/2+4}" font-size="10.5" text-anchor="end" fill="#252423">${esc(r.k)}</text><rect x="${L}" y="${y}" width="${bw}" height="${bh}" fill="${r.col||col}"><title>${esc(r.k)}: ${r.t||r.v}</title></rect><text x="${L+bw+4}" y="${y+bh/2+4}" font-size="10" fill="#605e5c">${r.t||r.v}</text>`; });
+  return s+'</svg>';
+}
+/* combo: columns (count) + line (portfolio overrun) */
+function combo(rows, w, h){
+  const L=36,R=44,B=22,T=16; const cw=(w-L-R)/rows.length; const maxN=Math.max(...rows.map(r=>r.n)); const nN=Math.ceil(maxN/10)*10;
+  const maxP=.4; let s=`<svg width="${w}" height="${h}" role="img">`;
+  for(let g=0;g<=4;g++){ const y=h-B-(h-B-T)*g/4; s+=`<line x1="${L}" x2="${w-R}" y1="${y}" y2="${y}" stroke="#edebe9"/><text x="${L-6}" y="${y+3}" font-size="10" text-anchor="end" fill="#8a8886">${nN*g/4}</text><text x="${w-R+6}" y="${y+3}" font-size="10" fill="#8a8886">${Math.round(maxP*g/4*100)}%</text>`; }
+  const pts=[]; rows.forEach((r,i)=>{ const x=L+i*cw+cw*.2, bw=cw*.6; const bh=(h-B-T)*r.n/nN; const bo=(h-B-T)*r.over/nN;
+    s+=`<rect x="${x}" y="${h-B-bh}" width="${bw}" height="${bh}" fill="#c6dcf5"><title>${r.yr}: ${r.n} projects closed</title></rect><rect x="${x}" y="${h-B-bo}" width="${bw}" height="${bo}" fill="${C.blue}"><title>${r.yr}: ${r.over} overran</title></rect>`;
+    s+=`<text x="${x+bw/2}" y="${h-6}" font-size="11" text-anchor="middle" fill="#605e5c">${r.yr}</text>`;
+    pts.push([x+bw/2, h-B-(h-B-T)*Math.max(r.portfolio,0)/maxP, r]); });
+  s+=`<line x1="${L}" x2="${w-R}" y1="${h-B-(h-B-T)*.1/maxP}" y2="${h-B-(h-B-T)*.1/maxP}" stroke="${C.bad}" stroke-dasharray="4 3"/><text x="${L+4}" y="${h-B-(h-B-T)*.1/maxP-4}" font-size="10" fill="${C.bad}">target &lt; 10%</text>`;
+  s+=`<polyline points="${pts.map(p=>p[0]+','+p[1]).join(' ')}" fill="none" stroke="${C.orange}" stroke-width="2.5"/>`;
+  pts.forEach(([x,y,r])=>{ s+=`<circle cx="${x}" cy="${y}" r="3.5" fill="${C.orange}"/><text x="${x}" y="${y-7}" font-size="10" text-anchor="middle" fill="#252423">${pct(r.portfolio,0)}</text>`; });
+  return s+'</svg>';
+}
+
+/* ---------- pages ---------- */
+const PAGES = [
+ {id:'overview', name:'Overview', notes:[
+  'Portfolio overrun is budget-weighted and includes unbillable time, as recommended in the Plan of Action. All of it comes from Cost Tracker columns that already exist, so it works today.',
+  'At risk uses Beth\'s rule: any overrun above 0%. For projects that means a forecast above budget. For SLAs and retainers it means budget used ahead of time elapsed in the cycle.',
+  'Invoices come from Payment Schedule 2025.xlsm. Power BI can read the workbook where it sits, but nothing in it says whether an invoice has been raised or paid, because that is shown by cell colour. So this figure is "scheduled", not "outstanding".',
+  'The client slicer works across all three files only because of a small name-matching table kept inside the Power BI file. Client E, Client F Ltd and Client G are spelt differently in different files. The Clients list (clean-up Step 1) replaces this table later.',
+  'The PM slicer doesn\'t filter invoices, because the Payment Schedule has no PM column, only an AM.',
+  'This list is the whole MVP in one place: anything overrunning or burning ahead, sorted by size. It is the "what needs attention this week" view for the SMT.'],
+  render(){
+   const P=fProjects(), Cn=fContracts(), Pay=fPayments();
+   const B=P.reduce((a,p)=>a+p.budget,0), F=P.reduce((a,p)=>a+p.forecastUB,0); const port = B? F/B-1 : 0;
+   const over=P.filter(p=>p.forecastUB>p.budget); const cr=Cn.filter(atRiskC);
+   const due=Pay.reduce((a,p)=>a+p.amount,0);
+   const att=[...over.map(p=>({kind:'Project',name:p.project,client:p.client,who:p.pm,measure:pct(p.overrunUB),sz:p.forecastUB-p.budget,detail:gbpFull(p.forecastUB-p.budget)+' over'})),
+              ...cr.map(c=>({kind:c.type,name:c.name,client:c.client,who:c.pm,measure:pct0(c.pctUsed)+' used vs '+pct0(c.pctElapsed)+' time',sz:(c.pctUsed-c.pctElapsed)*c.budget,detail:gbpFull((c.pctUsed-c.pctElapsed)*c.budget)+' ahead'}))].sort((a,b)=>b.sz-a.sz);
+   const months=['Oct','Nov','Dec']; const ams=[...new Set(Pay.map(p=>p.am))];
+   const series=ams.map(a=>({name:a,col:AMCOL[a]||C.gold,vals:Object.fromEntries(months.map(m=>[m,Pay.filter(p=>p.am===a&&p.month===m).reduce((x,p)=>x+p.amount,0)]))}));
+   const projRows=[...P].sort((a,b)=>b.overrunUB-a.overrunUB).map(p=>({...p,label:p.client+' · '+p.project}));
+   return header('Delivery overview','Cost Tracker · SMT Budget Tracker Q4 · Payment Schedule')
+    + V(16,64,302,104,kpi('Portfolio overrun (incl. unbillable)',B?pct(port):'–',`${gbp(F)} forecast vs ${gbp(B)} budget · target &lt; 10%`, port>0.1?'bad':port>0?'':'good'))+pin(1,300,58)
+    + V(330,64,302,104,kpi('Projects at risk',`${over.length} <span style="font-size:16px;color:#605e5c">of ${P.length}</span>`,'Forecast above budget (any overrun above 0%)',over.length?'bad':'good'))+pin(2,614,58)
+    + V(644,64,302,104,kpi('SLAs and retainers burning ahead',`${cr.length} <span style="font-size:16px;color:#605e5c">of ${Cn.length}</span>`,'Budget used ahead of time elapsed, current quarter',cr.length?'bad':'good'))
+    + V(958,64,306,104,kpi('Invoices scheduled Oct–Dec',gbp(due),`${Pay.length} payment rows · status not available`))+pin(3,1246,58)
+    + V(16,180,620,300,`<h3>Forecast vs budget, active projects</h3><div class="sub">Overrun incl. unbillable time · sorted worst first</div>${hbarDiverge(projRows,596,240,'overrunUB','label')}`)+pin(4,1250,2)
+    + V(648,180,616,300,`<h3>Invoices scheduled by month and AM</h3><div class="legend">${series.map(s=>`<span><i style="background:${s.col}"></i>${esc(s.name)}</span>`).join('')}</div>${stackedCols(months,series,592,236)}`)+pin(5,1246,174)
+    + V(16,492,1248,216,`<h3>Needs attention <span style="font-weight:400;color:#605e5c">· ${att.length} items</span></h3><div class="scroll" style="top:34px">${att.length?`<table class="t"><thead><tr><th>Type</th><th>Client</th><th>Item</th><th>PM</th><th>Measure</th><th class="n">Size</th></tr></thead><tbody>${att.map(a=>`<tr><td><span class="pill ${a.kind==='Project'?'bad':'warn'}">${a.kind}</span></td><td>${esc(a.client)}</td><td>${esc(a.name)}</td><td>${a.who}</td><td>${a.measure}</td><td class="n">${a.detail}</td></tr>`).join('')}</tbody></table>`:empty('Nothing at risk for this filter')}</div>`)+pin(6,1246,486);
+  }},
+ {id:'projects', name:'Projects', notes:[
+  'Read straight from the Cost Tracker SharePoint list using Power BI\'s SharePoint Online list connector. This is the strongest source today: one row per project, with a status and owner.',
+  'Forecast is the PM\'s own estimate (spend + days to complete). The MVP shows it as it is. Once Float holds budgets and schedules, the same visual reads Float instead.',
+  '"Due date passed" and "Not updated in 3+ weeks" flag data that is probably stale rather than late work. Showing them is deliberate: it nudges PMs to keep the list current, and it measures how far the clean-up still has to go.',
+  'The history comes from the 271 Cost Tracker rows back to 2021, so the MVP has a trend on day one. This year\'s figure only covers projects closed so far.'],
+  render(){
+   const P=[...fProjects()].sort((a,b)=>b.overrunUB-a.overrunUB);
+   const B=P.reduce((a,p)=>a+p.budget,0), F=P.reduce((a,p)=>a+p.forecastUB,0), Fb=P.reduce((a,p)=>a+p.forecast,0);
+   const overAmt=P.filter(p=>p.forecastUB>p.budget).reduce((a,p)=>a+p.forecastUB-p.budget,0), underAmt=P.filter(p=>p.forecastUB<=p.budget).reduce((a,p)=>a+p.budget-p.forecastUB,0);
+   const staleCut='2026-09-28';
+   const rows=P.map(p=>{ const flags=[]; if(p.pastDue) flags.push('<span class="pill grey">Due date passed</span>'); if(p.updated<staleCut) flags.push('<span class="pill grey">Not updated 3+ wks</span>');
+     return `<tr><td>${esc(p.client)}</td><td>${esc(p.project)}</td><td>${p.pm}</td><td class="n">${gbpFull(p.budget)}</td><td class="n">${gbpFull(p.forecastUB)}</td><td class="n" style="color:${p.overrun>0?C.bad:'#107c10'}">${pct(p.overrun)}</td><td class="n" style="color:${p.overrunUB>0?C.bad:'#107c10'};font-weight:600">${pct(p.overrunUB)}</td><td>${p.overrunUB>0?'<span class="pill bad">At risk</span>':'<span class="pill ok">On budget</span>'}</td><td class="d ${p.pastDue?'stale':''}">${dt(p.due)}</td><td class="d">${dt(p.updated)}</td><td>${flags.join(' ')}</td></tr>`; }).join('');
+   const share = D.trend.map(t=>({k:String(t.yr),v:Math.round(t.over/t.n*100),t:Math.round(t.over/t.n*100)+'% ('+t.over+' of '+t.n+')',col:t.over/t.n>0.3?C.bad:C.blue}));
+   return header('Projects','Source: Cost Tracker (SharePoint list), last edited 13 Oct 2026')
+    + V(16,64,302,84,kpi('Portfolio overrun',B?pct(F/B-1):'–','Incl. unbillable · billable only '+(B?pct(Fb/B-1):'–')))
+    + V(330,64,302,84,kpi('Budget / forecast',`${gbp(B)} <span style="font-size:16px;color:#605e5c">/ ${gbp(F)}</span>`,P.length+' active projects'))
+    + V(644,64,302,84,kpi('Over / under',`<span style="color:${C.bad}">${gbp(overAmt)}</span> <span style="font-size:16px;color:#605e5c">/</span> <span style="color:#107c10">${gbp(underAmt)}</span>`,'Projects over budget vs projects under'))
+    + V(958,64,306,84,kpi('Flagged as possibly stale',P.filter(p=>p.pastDue||p.updated<staleCut).length+` <span style="font-size:16px;color:#605e5c">of ${P.length}</span>`,'Due date passed or not updated in 3+ weeks'))+pin(3,1246,58)
+    + V(16,160,1248,316,`<h3>Active projects</h3><div class="scroll" style="top:32px"><table class="t"><thead><tr><th>Client</th><th>Project</th><th>PM</th><th class="n">Budget</th><th class="n">Forecast incl. UB</th><th class="n">Overrun billable</th><th class="n">Overrun incl. UB</th><th>Status</th><th>Due</th><th>Updated</th><th>Data flags</th></tr></thead><tbody>${rows||''}</tbody>${P.length?`<tr class="tot"><td colspan="3">Total</td><td class="n">${gbpFull(B)}</td><td class="n">${gbpFull(F)}</td><td class="n">${pct(Fb/B-1)}</td><td class="n">${pct(F/B-1)}</td><td colspan="4"></td></tr>`:''}</table>${P.length?'':empty()}</div>`)+pin(1,16,154)+pin(2,560,154)
+    + V(16,488,720,220,`<h3>Closed projects by year and portfolio overrun</h3><div class="legend"><span><i style="background:#c6dcf5"></i>Closed</span><span><i style="background:${C.blue}"></i>Overran</span><span><i style="background:${C.orange}"></i>Portfolio overrun</span></div>${combo(D.trend,696,166)}`)+pin(4,718,482)
+    + V(748,488,516,220,`<h3>Share of closed projects that overran</h3><div class="sub">Not filtered by the slicers: whole history</div>${hbars(share,492,160,C.blue)}`);
+  }},
+ {id:'contracts', name:'SLAs & retainers', notes:[
+  'The SMT Budget Tracker is a new Excel file each quarter. Power BI can point at the folder and pick up the newest file automatically, but only if each quarter keeps the same sheet name and column layout. If someone redesigns the sheet, the page breaks until the query is fixed.',
+  'Because each quarter is a separate file, the MVP shows the current quarter only. Combining past files for a trend is possible but fragile, so it waits for the Contracts list (clean-up Step 3).',
+  'The black tick is time elapsed in the cycle; the bar is budget used. Red means used is ahead of time, which is Beth\'s at-risk rule applied to contracts.',
+  'Contract end dates are shown, but 10 of 18 are already in the past on contracts that are still running, so the MVP greys them out and doesn\'t raise renewal warnings. Those switch on once Marc has updated the dates.'],
+  render(){
+   const Cn=[...fContracts()].sort((a,b)=>(b.pctUsed-b.pctElapsed)-(a.pctUsed-a.pctElapsed));
+   const bud=Cn.reduce((a,c)=>a+c.budget,0), used=Cn.reduce((a,c)=>a+c.used,0);
+   const typeChips=`<div class="slicer">Type <div class="chips">${['All','SLA','Retainer'].map(v=>`<button data-ctype="${v}" aria-pressed="${S.ctype===v}">${v}</button>`).join('')}</div></div>`;
+   return header('SLAs & retainers','Source: 2026 Q4 SMT Budget Tracker.xlsx',{extra:typeChips})
+    + V(16,64,302,84,kpi('Budget this cycle',gbp(bud),Cn.length+' contracts'))
+    + V(330,64,302,84,kpi('Used so far',gbp(used),bud?pct0(used/bud)+' of budget':''))
+    + V(644,64,302,84,kpi('Burning ahead of time',Cn.filter(atRiskC).length+` <span style="font-size:16px;color:#605e5c">of ${Cn.length}</span>`,'Used % above time elapsed %',Cn.filter(atRiskC).length?'bad':'good'))
+    + V(958,64,306,84,kpi('Renewals due in 60 days','<span style="color:#a19f9d">n/a</span>','Contract end dates not reliable yet'))+pin(4,1246,58)
+    + V(16,160,1248,548,`<h3>Burn by contract <span style="font-weight:400;color:#605e5c">· bar = budget used, tick = time elapsed</span></h3><div class="scroll" style="top:32px"><table class="t"><thead><tr><th>Contract</th><th>Client</th><th>Type</th><th>PM</th><th>AM</th><th class="n">Budget</th><th class="n">Used</th><th style="width:170px">Used vs time</th><th>Status</th><th>Cycle</th><th>Contract end</th></tr></thead><tbody>${Cn.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.client)}</td><td>${c.type}</td><td>${c.pm}</td><td>${c.am}</td><td class="n">${gbpFull(c.budget)}</td><td class="n">${gbpFull(c.used)}</td><td>${burn(c.pctUsed,c.pctElapsed)}</td><td>${atRiskC(c)?'<span class="pill bad">Ahead</span>':'<span class="pill ok">On track</span>'}</td><td class="d">${dt(c.cycleStart)} – ${dt(c.cycleEnd)}</td><td class="d ${c.endPast?'stale':''}">${dt(c.contractEnd)}${c.endPast?' ⚠':''}</td></tr>`).join('')}</tbody></table>${Cn.length?'':empty()}</div>`)+pin(1,16,154)+pin(2,300,154)+pin(3,760,154);
+  }},
+ {id:'invoices', name:'Invoice pipeline', notes:[
+  'Power BI reads Payment Schedule 2025.xlsm where it sits on SharePoint. Power Query turns its AM-by-AM blocks and month columns into one row per payment. This is the most fragile part of the MVP: it depends on the workbook keeping its layout and its file name, so a "2026" copy would need the report re-pointing.',
+  'Six "Client S Group" rows (£107.7k) are repeats of other rows with no project name, so the query filters them out. If the sheet gains other subtotal rows, they would double-count until the rule is updated.',
+  'There is no status column. Paid, invoiced and due are shown by colour, which Power BI can\'t read. So this page answers "what is scheduled" but not "what is outstanding". That needs the Payments list (Step 4), or a Status column added to the workbook if the CEO prefers to keep it.',
+  'Three rows have no AM. They show as (blank), which is a useful prompt in itself.'],
+  render(){
+   const Pay=fPayments(); const months=['Oct','Nov','Dec'];
+   const byM=m=>Pay.filter(p=>p.month===m).reduce((a,p)=>a+p.amount,0);
+   const byClient=Object.entries(Pay.reduce((o,p)=>(o[p.client]=(o[p.client]||0)+p.amount,o),{})).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([k,v])=>({k,v,t:gbp(v)}));
+   const byAM=Object.entries(Pay.reduce((o,p)=>(o[p.am]=(o[p.am]||0)+p.amount,o),{})).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({k,v,t:gbp(v),col:AMCOL[k]||C.gold}));
+   const rows=[...Pay].sort((a,b)=>months.indexOf(a.month)-months.indexOf(b.month)||a.week-b.week);
+   return header('Invoice pipeline','Source: Payment Schedule 2025.xlsm',{pm:false})
+    + `<div class="banner" style="left:16px;top:58px;width:1248px;height:30px">⚠ Scheduled amounts only. The Payment Schedule marks paid and invoiced by cell colour, which Power BI can't read.</div>`+pin(3,1246,54)
+    + months.map((m,i)=>V(16+i*314,98,302,84,kpi('Scheduled in '+({Oct:'October',Nov:'November',Dec:'December'})[m],gbp(byM(m)),Pay.filter(p=>p.month===m).length+' payments'))).join('')
+    + V(958,98,306,84,kpi('Rows with no AM',Pay.filter(p=>p.am==='(blank)').length,'Shown as (blank)'))+pin(4,1246,92)
+    + V(16,190,410,270,`<h3>By client (top 12)</h3>${hbars(byClient,386,226,C.blue)}`)
+    + V(438,190,300,270,`<h3>By AM</h3>${hbars(byAM,276,226)}`)
+    + V(750,190,514,518,`<h3>Payments</h3><div class="scroll" style="top:32px"><table class="t"><thead><tr><th>Month</th><th>Wk</th><th>Client</th><th>Item</th><th>AM</th><th class="n">Amount</th></tr></thead><tbody>${rows.map(p=>`<tr><td>${p.month}</td><td>${p.week}</td><td>${esc(p.client)}</td><td>${esc(p.item)}</td><td class="${p.am==='(blank)'?'stale':''}">${esc(p.am)}</td><td class="n">${gbpFull(p.amount)}</td></tr>`).join('')}</tbody>${rows.length?`<tr class="tot"><td colspan="5">Total</td><td class="n">${gbpFull(rows.reduce((a,p)=>a+p.amount,0))}</td></tr>`:''}</table>${rows.length?'':empty()}</div>`)+pin(1,750,184)
+    + V(16,472,722,236,`<h3>What the query removes</h3><table class="t"><tbody><tr><td>"Client S Group" rows with no project name (repeats of other rows)</td><td class="n">${D.volkerExcluded} rows</td><td class="n">${gbpFull(107697.66)}</td></tr><tr><td>Months outside the selected quarter</td><td class="n">kept in the model</td><td class="n">–</td></tr><tr><td>Blank and heading rows between AM blocks</td><td class="n">all</td><td class="n">–</td></tr></tbody></table><p style="font-size:11.5px;color:#605e5c;margin:10px 0 0">The MVP shows Oct–Dec 2026. A month slicer can open up the rest of the year once the query has been checked against the full workbook.</p>`)+pin(2,720,466);
+  }},
+ {id:'lessons', name:'Lessons', notes:[
+  'Power BI reads every closure report in the folder and combines them. This works because the three reports share the same template. A report in a different layout would be skipped or misread, so the template needs to stay fixed.',
+  'Estimate and actual come from fixed cells in the report. Client G has no estimate filled in, so it shows actuals only.',
+  'Lessons are free text with a category. The MVP gives a searchable library. Automatic matching to new projects waits for a project type on every project (Step 5).'],
+  render(){
+   const Cl=fClosures(), L=fLessons();
+   const cats=['All',...new Set(D.lessons.map(l=>l.cat))];
+   const catChips=`<div class="slicer">Category <div class="chips">${cats.map(v=>`<button data-lcat="${v}" aria-pressed="${S.lcat===v}">${v}</button>`).join('')}</div></div>`;
+   const dayRows=[]; Cl.forEach(c=>{ dayRows.push({k:c.client+' estimate',v:c.estDays||0,t:c.estDays?c.estDays+' d':'not recorded',col:'#c6dcf5'}); dayRows.push({k:c.client+' actual',v:c.actDays,t:c.actDays+' d',col:C.blue}); });
+   return header('Lessons learned','Source: Project closure reports (3 in the folder)',{extra:catChips})
+    + V(16,64,760,170,`<h3>Closure reports</h3><table class="t"><thead><tr><th>Project</th><th>PM</th><th>Type</th><th class="n">Est. days</th><th class="n">Actual days</th><th class="n">Non-billable days</th><th class="n">Slip (days)</th><th class="n">Profit</th></tr></thead><tbody>${Cl.map(c=>`<tr><td>${esc(c.project)}</td><td>${c.pm}</td><td>${esc(c.type)}</td><td class="n ${c.estDays?'':'stale'}">${c.estDays??'–'}</td><td class="n">${c.actDays}</td><td class="n">${c.nonBillableDays}</td><td class="n">${c.finishSlipDays}</td><td class="n" style="color:${c.profit<0?C.bad:'#107c10'}">${gbpFull(c.profit)}</td></tr>`).join('')}</tbody></table>${Cl.length?'':empty()}`)+pin(1,16,58)+pin(2,758,58)
+    + V(788,64,476,170,`<h3>Estimate vs actual days</h3>${hbars(dayRows,452,128)}`)
+    + V(16,246,1248,462,`<h3>Lessons library <span style="font-weight:400;color:#605e5c">· ${L.length} lessons</span></h3><div class="scroll" style="top:32px">${L.length?`<table class="t"><thead><tr><th>Category</th><th>Project</th><th style="width:30%">What happened</th><th style="width:22%">Impact</th><th style="width:28%">Action</th></tr></thead><tbody>${L.map(l=>`<tr><td><span class="pill grey">${esc(l.cat)}</span></td><td>${esc(l.project)}</td><td>${esc(l.issue)}</td><td>${esc(l.impact)}</td><td>${esc(l.action)}</td></tr>`).join('')}</tbody></table>`:empty()}</div>`)+pin(3,16,240);
+  }},
+ {id:'health', name:'Data health', notes:[
+  'This page is what makes the MVP grow step by step. Each row is a gap in today\'s data, the effect it has on the report, and the clean-up step that closes it. As each step is done, its row drops to zero and the matching feature can be switched on.',
+  'Counts are worked out by the report itself from the live sources, so the page stays current without anyone maintaining it.'],
+  render(){
+   const P=D.projects, Cn=D.contracts, Pay=D.payments;
+   const rows=[
+    ['Active projects past their due date','Cost Tracker',P.filter(p=>p.pastDue).length+' of '+P.length,'Shown as "Due date passed"; can\'t tell late work from an old date','Step 2 (dates in Float)'],
+    ['Active projects not updated in 3+ weeks','Cost Tracker',P.filter(p=>p.updated<'2026-09-28').length+' of '+P.length,'Forecast may be out of date','Weekly routine (Step 7)'],
+    ['Client spelt differently between files','All','3 clients','Name-matching table kept inside Power BI','Step 1 Clients list'],
+    ['Contract end date in the past on a running contract','SMT Budget Tracker',Cn.filter(c=>c.endPast).length+' of '+Cn.length,'Renewal warnings switched off','Step 3 (Marc updates dates)'],
+    ['New tracker file every quarter','SMT Budget Tracker','1 file per quarter','Current quarter only; no trend','Step 3 Contracts list'],
+    ['Annual retainer with quarterly cycle dates','SMT Budget Tracker','1 (Client A)','Burn % may be misleading','Step 3'],
+    ['Paid / invoiced shown only by cell colour','Payment Schedule','All '+Pay.length+' rows','Scheduled, not outstanding','Step 4 Payments list'],
+    ['Repeat rows with no project name','Payment Schedule',D.volkerExcluded+' rows','Filtered out by a rule in the query','Step 4'],
+    ['Payment rows with no AM','Payment Schedule',Pay.filter(p=>p.am==='(blank)').length+' rows','Shown as (blank)','Step 4'],
+    ['No PM on payments','Payment Schedule','All rows','PM slicer can\'t filter invoices','Step 4'],
+    ['Closure report missing its estimate','Closure reports','1 of 3','Actuals only for that project','Step 5'],
+    ['No project type on projects','Cost Tracker','All','No automatic lesson matching','Step 5'],
+   ];
+   return header('Data health','What today\'s data can\'t do yet, and which clean-up step fixes it',{pm:false,client:false})
+    + V(16,64,1248,644,`<table class="t roomy" style="font-size:13.5px"><thead><tr><th>Gap</th><th>Source</th><th class="n">Count today</th><th>Effect in the MVP</th><th>Fixed by</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="n" style="font-weight:600">${r[2]}</td><td>${r[3]}</td><td><span class="pill warn">${r[4]}</span></td></tr>`).join('')}</tbody></table>`)+pin(1,16,58)+pin(2,1246,58);
+  }},
+];
+
+/* ---------- render ---------- */
+function renderTabs(){ document.getElementById('tabs').innerHTML = PAGES.map(p=>`<button role="tab" data-page="${p.id}" aria-selected="${S.page===p.id}">${p.name}</button>`).join(''); }
+function renderPage(){
+  const pg = PAGES.find(p=>p.id===S.page);
+  document.getElementById('page').innerHTML = pg.render();
+  document.getElementById('notesTitle').textContent = 'Build notes: ' + pg.name;
+  document.getElementById('notesList').innerHTML = pg.notes.map((n,i)=>`<li id="note-${i+1}">${esc(n)}</li>`).join('');
+  renderTabs(); fit();
+}
+function fit(){ const sc=document.getElementById('scaler'); const w=sc.clientWidth; const k=w/1280; document.getElementById('page').style.transform=`scale(${k})`; sc.style.height=(720*k)+'px'; }
+window.addEventListener('resize', fit);
+document.addEventListener('click', e=>{
+  const t=e.target.closest('button,[data-page]'); if(!t) return;
+  if(t.dataset.page){ S.page=t.dataset.page; try{history.replaceState(null,'','#'+S.page)}catch(_){} renderPage(); }
+  else if(t.dataset.pm){ S.pm=t.dataset.pm; renderPage(); }
+  else if(t.dataset.ctype){ S.ctype=t.dataset.ctype; renderPage(); }
+  else if(t.dataset.lcat){ S.lcat=t.dataset.lcat; renderPage(); }
+  else if(t.dataset.mode){ document.body.className='mode-'+t.dataset.mode + (document.getElementById('notesOn').checked?'':' nonotes'); document.querySelectorAll('.modes button').forEach(b=>b.setAttribute('aria-pressed', b===t)); if(t.dataset.mode==='report') fit(); }
+  else if(t.classList.contains('pin')){ const li=document.getElementById('note-'+t.dataset.n); if(li){ document.querySelectorAll('.notes li').forEach(x=>x.classList.remove('hl')); li.classList.add('hl'); li.scrollIntoView({behavior:'smooth',block:'nearest'}); } }
+});
+document.addEventListener('change', e=>{
+  if(e.target.matches('[data-client]')){ S.client=e.target.value; renderPage(); }
+  if(e.target.id==='notesOn'){ document.body.classList.toggle('nonotes', !e.target.checked); }
+});
+const h=(location.hash||'').slice(1); if(PAGES.some(p=>p.id===h)) S.page=h;
+window.addEventListener('hashchange',()=>{ const x=location.hash.slice(1); if(PAGES.some(p=>p.id===x)&&x!==S.page){S.page=x;renderPage();} });
+
+/* ---------- plan view ---------- */
+document.getElementById('plan').innerHTML = `<div class="doc">
+<h2>What the MVP is</h2>
+<p>A Power BI report with six pages, reading the four sources exactly as they are today. It is published to a Delivery Hub workspace and added as a tab on the Delivery site and in Teams. Access is the Level 10 group, and everyone in it sees everything. There is no clean-up before launch. Instead, a Data health page shows what each clean-up step will unlock, so the report grows one source at a time.</p>
+<h2>How each source is read</h2>
+<div class="tblwrap"><table><thead><tr><th>Source</th><th>How Power BI reads it</th><th>Works as it is?</th><th>What it can't do yet</th></tr></thead><tbody>
+<tr><td><b>Cost Tracker</b><br>SharePoint list</td><td>SharePoint Online list connector</td><td>Yes. One row per project, with status, owner and unbillable columns.</td><td>The forecast is the PM's typed estimate. There is no project type, so lessons can't be matched.</td></tr>
+<tr><td><b>SMT Budget Tracker</b><br>New Excel file each quarter</td><td>SharePoint folder connector, picking the newest tracker file in the folder</td><td>Mostly, as long as each quarter keeps the same sheet name and columns.</td><td>Current quarter only, with no trend. Contract end dates aren't reliable, so renewal warnings are off.</td></tr>
+<tr><td><b>Payment Schedule 2025.xlsm</b><br>Excel workbook (stays as it is)</td><td>SharePoint file connector. Power Query reshapes the AM blocks and month columns into rows, and drops the repeat rows.</td><td>Yes, but this is the most fragile source: moving it, renaming it or changing its layout breaks the page.</td><td>No paid or invoiced status (that is cell colour) and no PM.</td></tr>
+<tr><td><b>Closure reports</b><br>One Excel file per project</td><td>SharePoint folder connector, combining files that share the template</td><td>Yes, for reports on the current template.</td><td>Lessons can be searched, but not matched to new projects automatically.</td></tr>
+<tr><td><b>Client names</b></td><td>A small matching table typed into the Power BI file</td><td>Yes, kept up to date by hand.</td><td>Replaced by the Clients list once Step 1 is done.</td></tr>
+</tbody></table></div>
+<p>Everything is on SharePoint Online, so no on-premises gateway is needed. With Power BI Pro, scheduled refresh can run up to eight times a day. Daily at 7am is enough for an MVP, plus a refresh straight after the Monday timesheet deadline.</p>
+<h2>What it leaves out</h2>
+<ul><li>Utilisation, billability and people (needs Float)</li><li>Support tickets and SLA response times (needs Zendesk)</li><li>Which invoices are outstanding, as opposed to scheduled</li><li>Renewal warnings, until contract end dates are fixed</li><li>The AI assistant and the drafted weekly SMT summary</li></ul>
+<h2>How it grows</h2>
+<p>Each release swaps one source for its cleaned-up version. The report pages stay where they are, so people don't have to relearn anything.</p>
+<div class="steps">
+<div class="step now"><div class="k">MVP · now</div><h3>Data as it is</h3><p>Overview, Projects, SLAs &amp; retainers, Invoice pipeline, Lessons, Data health.</p></div>
+<div class="step"><div class="k">Release 2 · Step 1</div><h3>Clients list</h3><p>Replaces the matching table. The client filter becomes dependable, and client pages become possible.</p></div>
+<div class="step"><div class="k">Release 3 · Step 3</div><h3>Contracts list</h3><p>Renewal warnings switch on, and burn can be compared quarter on quarter.</p></div>
+<div class="step"><div class="k">Release 4 · Step 4</div><h3>Payments list</h3><p>Adds outstanding and overdue invoices. If the workbook has to stay, a Status column in it does most of the same job.</p></div>
+<div class="step"><div class="k">Release 5 · Step 5</div><h3>Closed projects &amp; lessons</h3><p>Project types on everything, so lessons can be matched to new projects.</p></div>
+<div class="step"><div class="k">Release 6 · Steps 2 &amp; 7</div><h3>Float</h3><p>Adds a People page with utilisation against targets. Forecasts come from Float schedules, and the Cost Tracker retires after a parallel run.</p></div>
+<div class="step"><div class="k">Release 7 · Step 6</div><h3>Zendesk</h3><p>Adds a Support page and tickets alongside SLA burn.</p></div>
+</div>
+<h2>What it needs to start</h2>
+<ul>
+<li>Power BI Pro for the builder and for every Level 10 viewer. It is $14 per user per month at list price and isn't included in E3.</li>
+<li>A Delivery Hub workspace, with the Level 10 group given Viewer access.</li>
+<li>Read access for the builder to the Cost Tracker, the SMT tracker folder, the Payment Schedule and the closure reports folder.</li>
+<li>An agreement that the Payment Schedule and the SMT tracker keep their place, sheet names and column layout, or that the builder is told before they change.</li>
+</ul>
+<h2>Rough effort</h2>
+<div class="tblwrap"><table><thead><tr><th>Work</th><th>Days</th></tr></thead><tbody>
+<tr><td>Power Query for the four sources, the client matching table and the data model</td><td>3–4</td></tr>
+<tr><td>Six report pages, the measures (portfolio overrun, at risk, burn) and data health checks</td><td>3–4</td></tr>
+<tr><td>Review with Beth, fixes, publishing, access and the SharePoint/Teams tab</td><td>2–3</td></tr>
+<tr><td><b>Total</b></td><td><b>8–11</b></td></tr>
+</tbody></table></div>
+<p>This is a first estimate for discussion, not a quote. Most of the risk is in the Payment Schedule query. The later releases fit within the effort already in the Plan of Action, because each one replaces a source rather than adding new pages.</p>
+</div>`;
+renderPage();
+</script>
+</body>
+</html>
